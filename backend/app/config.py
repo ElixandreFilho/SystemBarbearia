@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://barbearia:barbearia@localhost:5432/barbearia"
     frontend_origin: str = "http://localhost:5173"
     barbershop_timezone: str = "America/Fortaleza"
+    jwt_secret_key: str = "development-only-change-me"
+    jwt_access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
+    refresh_cookie_secure: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 

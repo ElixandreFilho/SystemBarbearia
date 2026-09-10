@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import get_settings
+from app.api.auth import router as auth_router
+from app.dependencies import DbSession
 
 settings = get_settings()
 
@@ -19,7 +22,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
+
 
 @app.get("/health", tags=["system"])
-async def health() -> dict[str, str]:
-    return {"status": "ok", "environment": settings.environment}
+async def health(db: DbSession) -> dict[str, str]:
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="banco indisponível") from exc
+    return {"status": "ok", "environment": settings.environment, "database": "ok"}
