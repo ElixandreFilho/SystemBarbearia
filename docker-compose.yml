@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: barbearia-db
+    environment:
+      POSTGRES_DB: barbearia
+      POSTGRES_USER: barbearia
+      POSTGRES_PASSWORD: barbearia
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barbearia -d barbearia"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    container_name: barbearia-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://barbearia:barbearia@db:5432/barbearia
+      ENVIRONMENT: development
+      FRONTEND_ORIGIN: http://localhost:5173
+      BARBERSHOP_TIMEZONE: America/Fortaleza
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:

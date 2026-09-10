@@ -1,0 +1,24 @@
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import 'vuetify/styles'
+import '@mdi/font/css/materialdesignicons.css'
+import { createVuetify } from 'vuetify'
+
+import App from './App.vue'
+
+const vuetify = createVuetify({
+  theme: {
+    defaultTheme: 'barbearia',
+    themes: {
+      barbearia: {
+        colors: {
+          primary: '#5D4037',
+          secondary: '#D7A86E',
+          background: '#FAF7F2',
+        },
+      },
+    },
+  },
+})
+
+createApp(App).use(createPinia()).use(vuetify).mount('#app')
