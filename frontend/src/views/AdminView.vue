@@ -30,13 +30,13 @@ const router = useRouter()
 const auth = useAuthStore()
 const services = ref<Service[]>([])
 const days = ref<DayForm[]>([
-  { weekday: 0, label: 'Domingo', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 1, label: 'Segunda-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 2, label: 'Terça-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 3, label: 'Quarta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 4, label: 'Quinta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 5, label: 'Sexta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 6, label: 'Sábado', enabled: false, start_time: '09:00', end_time: '14:00' },
+  { weekday: 0, label: 'Segunda-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
+  { weekday: 1, label: 'Terça-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
+  { weekday: 2, label: 'Quarta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
+  { weekday: 3, label: 'Quinta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
+  { weekday: 4, label: 'Sexta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
+  { weekday: 5, label: 'Sábado', enabled: false, start_time: '09:00', end_time: '14:00' },
+  { weekday: 6, label: 'Domingo', enabled: false, start_time: '09:00', end_time: '14:00' },
 ])
 const form = ref({ id: '', name: '', description: '', price: '', duration: '30' })
 const loading = ref(true)
