@@ -196,3 +196,24 @@ class AvailabilityResponse(BaseModel):
     date: date
     duration_minutes: int
     slots: list[time]
+
+
+class AppointmentCreate(BaseModel):
+    date: date
+    start_time: time
+    service_ids: list[UUID] = Field(min_length=1)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class AppointmentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    customer_id: UUID
+    date: date
+    start_time: time
+    end_time: time
+    status: str
+    total_price_cents: int
+    total_duration_minutes: int
+    notes: str | None
