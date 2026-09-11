@@ -4,12 +4,13 @@ from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.availability import get_availability
 from app.dependencies import DbSession, get_current_user, require_role
+from app.audit import record_audit
 from app.models import Appointment, AppointmentService, AppointmentStatus, BarbershopSettings, IdempotencyRecord, Service, User, UserRole
 from app.schemas import AppointmentCreate, AppointmentResponse, CancelAppointmentRequest
 
@@ -125,7 +126,7 @@ async def cancel_my_appointment(
 
 @admin_router.get("", response_model=list[AppointmentResponse])
 async def list_admin_appointments(
-    _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
     db: DbSession,
     target_date: date | None = Query(default=None, alias="date"),
     appointment_status: AppointmentStatus | None = Query(default=None, alias="status"),
@@ -142,6 +143,7 @@ async def list_admin_appointments(
 async def admin_cancel_appointment(
     appointment_id: UUID,
     payload: CancelAppointmentRequest,
+    request: Request,
     admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
     db: DbSession,
 ) -> Appointment:
@@ -154,6 +156,7 @@ async def admin_cancel_appointment(
     appointment.cancelled_at = datetime.now(UTC)
     appointment.cancelled_by = admin.id
     appointment.cancellation_reason = payload.reason
+    record_audit(db, request, admin.id, "APPOINTMENT_CANCELLED", "Appointment", str(appointment.id), {"reason": payload.reason})
     await db.commit()
     await db.refresh(appointment)
     return appointment
@@ -162,6 +165,7 @@ async def admin_cancel_appointment(
 @admin_router.patch("/{appointment_id}/complete", response_model=AppointmentResponse)
 async def complete_appointment(
     appointment_id: UUID,
+    request: Request,
     _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
     db: DbSession,
 ) -> Appointment:
@@ -171,6 +175,7 @@ async def complete_appointment(
     if appointment.status != AppointmentStatus.CONFIRMED:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="apenas agendamentos confirmados podem ser concluídos")
     appointment.status = AppointmentStatus.COMPLETED
+    record_audit(db, request, admin.id, "APPOINTMENT_COMPLETED", "Appointment", str(appointment.id))
     await db.commit()
     await db.refresh(appointment)
     return appointment
@@ -179,7 +184,8 @@ async def complete_appointment(
 @admin_router.patch("/{appointment_id}/no-show", response_model=AppointmentResponse)
 async def mark_no_show(
     appointment_id: UUID,
-    _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    request: Request,
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
     db: DbSession,
 ) -> Appointment:
     appointment = await db.get(Appointment, appointment_id)
@@ -192,6 +198,7 @@ async def mark_no_show(
     if appointment_end + timedelta(minutes=settings.no_show_grace_minutes) > datetime.now(ZoneInfo(settings.timezone)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="o horário ainda não ultrapassou a tolerância de no-show")
     appointment.status = AppointmentStatus.NO_SHOW
+    record_audit(db, request, admin.id, "APPOINTMENT_NO_SHOW", "Appointment", str(appointment.id))
     await db.commit()
     await db.refresh(appointment)
     return appointment

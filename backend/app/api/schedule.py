@@ -2,11 +2,12 @@ from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
 from app.dependencies import DbSession, require_role
+from app.audit import record_audit
 from app.models import BarbershopSettings, BlockedSlot, BusinessHours, SpecialDate, User, UserRole
 from app.schemas import (
     BlockedSlotCreate,
@@ -36,13 +37,14 @@ async def get_settings(_: AdminUser, db: DbSession) -> BarbershopSettings:
 
 
 @router.patch("/settings", response_model=SettingsResponse)
-async def update_settings(payload: SettingsUpdate, _: AdminUser, db: DbSession) -> BarbershopSettings:
+async def update_settings(payload: SettingsUpdate, request: Request, admin: AdminUser, db: DbSession) -> BarbershopSettings:
     settings = await db.get(BarbershopSettings, 1)
     if settings is None:
         settings = BarbershopSettings(id=1)
         db.add(settings)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(settings, field, value)
+    record_audit(db, request, admin.id, "SETTINGS_UPDATED", "BarbershopSettings", "1", {"fields": list(payload.model_dump(exclude_unset=True))})
     await db.commit()
     await db.refresh(settings)
     return settings
@@ -55,10 +57,11 @@ async def list_business_hours(_: AdminUser, db: DbSession) -> list[BusinessHours
 
 
 @router.put("/business-hours", response_model=list[BusinessHoursResponse])
-async def replace_business_hours(payload: list[BusinessHoursItem], _: AdminUser, db: DbSession) -> list[BusinessHours]:
+async def replace_business_hours(payload: list[BusinessHoursItem], request: Request, admin: AdminUser, db: DbSession) -> list[BusinessHours]:
     await db.execute(delete(BusinessHours))
     rows = [BusinessHours(**item.model_dump()) for item in payload]
     db.add_all(rows)
+    record_audit(db, request, admin.id, "BUSINESS_HOURS_REPLACED", "BusinessHours", metadata={"interval_count": len(rows)})
     await db.commit()
     return rows
 
@@ -70,9 +73,10 @@ async def list_special_dates(_: AdminUser, db: DbSession) -> list[SpecialDate]:
 
 
 @router.post("/special-dates", response_model=SpecialDateResponse, status_code=status.HTTP_201_CREATED)
-async def create_special_date(payload: SpecialDateCreate, _: AdminUser, db: DbSession) -> SpecialDate:
+async def create_special_date(payload: SpecialDateCreate, request: Request, admin: AdminUser, db: DbSession) -> SpecialDate:
     row = SpecialDate(**payload.model_dump())
     db.add(row)
+    record_audit(db, request, admin.id, "SPECIAL_DATE_CREATED", "SpecialDate", metadata=payload.model_dump())
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -83,23 +87,25 @@ async def create_special_date(payload: SpecialDateCreate, _: AdminUser, db: DbSe
 
 
 @router.patch("/special-dates/{special_date_id}", response_model=SpecialDateResponse)
-async def update_special_date(special_date_id: UUID, payload: SpecialDateUpdate, _: AdminUser, db: DbSession) -> SpecialDate:
+async def update_special_date(special_date_id: UUID, payload: SpecialDateUpdate, request: Request, admin: AdminUser, db: DbSession) -> SpecialDate:
     row = await db.get(SpecialDate, special_date_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="data especial não encontrada")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(row, field, value)
+    record_audit(db, request, admin.id, "SPECIAL_DATE_UPDATED", "SpecialDate", str(row.id), payload.model_dump(exclude_unset=True))
     await db.commit()
     await db.refresh(row)
     return row
 
 
 @router.delete("/special-dates/{special_date_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_special_date(special_date_id: UUID, _: AdminUser, db: DbSession) -> None:
+async def delete_special_date(special_date_id: UUID, request: Request, admin: AdminUser, db: DbSession) -> None:
     row = await db.get(SpecialDate, special_date_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="data especial não encontrada")
     await db.delete(row)
+    record_audit(db, request, admin.id, "SPECIAL_DATE_DELETED", "SpecialDate", str(row.id))
     await db.commit()
 
 
@@ -113,18 +119,20 @@ async def list_blocked_slots(_: AdminUser, db: DbSession, target_date: date | No
 
 
 @router.post("/blocked-slots", response_model=BlockedSlotResponse, status_code=status.HTTP_201_CREATED)
-async def create_blocked_slot(payload: BlockedSlotCreate, admin: AdminUser, db: DbSession) -> BlockedSlot:
+async def create_blocked_slot(payload: BlockedSlotCreate, request: Request, admin: AdminUser, db: DbSession) -> BlockedSlot:
     row = BlockedSlot(**payload.model_dump(), created_by=admin.id)
     db.add(row)
+    record_audit(db, request, admin.id, "BLOCKED_SLOT_CREATED", "BlockedSlot", metadata=payload.model_dump())
     await db.commit()
     await db.refresh(row)
     return row
 
 
 @router.delete("/blocked-slots/{blocked_slot_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_blocked_slot(blocked_slot_id: UUID, _: AdminUser, db: DbSession) -> None:
+async def delete_blocked_slot(blocked_slot_id: UUID, request: Request, admin: AdminUser, db: DbSession) -> None:
     row = await db.get(BlockedSlot, blocked_slot_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="bloqueio não encontrado")
     await db.delete(row)
+    record_audit(db, request, admin.id, "BLOCKED_SLOT_DELETED", "BlockedSlot", str(row.id))
     await db.commit()

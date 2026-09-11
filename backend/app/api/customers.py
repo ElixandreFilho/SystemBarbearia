@@ -1,11 +1,12 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.dependencies import DbSession, require_role
+from app.audit import record_audit
 from app.models import User, UserRole
 from app.schemas import CustomerCreate, CustomerUpdate, UserResponse
 from app.security import hash_password
@@ -34,7 +35,7 @@ async def list_customers(
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_customer(payload: CustomerCreate, _: AdminUser, db: DbSession) -> User:
+async def create_customer(payload: CustomerCreate, request: Request, admin: AdminUser, db: DbSession) -> User:
     email = normalize_email(payload.email)
     phone = payload.phone.strip() if payload.phone else None
     existing = await db.scalar(select(User).where(or_(func.lower(User.email) == email if email else False, User.phone == phone if phone else False)))
@@ -48,6 +49,7 @@ async def create_customer(payload: CustomerCreate, _: AdminUser, db: DbSession) 
         role=UserRole.CUSTOMER,
     )
     db.add(customer)
+    record_audit(db, request, admin.id, "CUSTOMER_CREATED", "User", metadata={"email": email, "phone": phone})
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -66,7 +68,7 @@ async def get_customer(customer_id: UUID, _: AdminUser, db: DbSession) -> User:
 
 
 @router.patch("/{customer_id}", response_model=UserResponse)
-async def update_customer(customer_id: UUID, payload: CustomerUpdate, _: AdminUser, db: DbSession) -> User:
+async def update_customer(customer_id: UUID, payload: CustomerUpdate, request: Request, admin: AdminUser, db: DbSession) -> User:
     customer = await db.scalar(select(User).where(User.id == customer_id, User.role == UserRole.CUSTOMER))
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="cliente não encontrado")
@@ -79,6 +81,7 @@ async def update_customer(customer_id: UUID, payload: CustomerUpdate, _: AdminUs
         updates["password_hash"] = hash_password(updates.pop("password"))
     for field, value in updates.items():
         setattr(customer, field, value)
+    record_audit(db, request, admin.id, "CUSTOMER_UPDATED", "User", str(customer.id), {"fields": list(updates)})
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -89,9 +92,10 @@ async def update_customer(customer_id: UUID, payload: CustomerUpdate, _: AdminUs
 
 
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def deactivate_customer(customer_id: UUID, _: AdminUser, db: DbSession) -> None:
+async def deactivate_customer(customer_id: UUID, request: Request, admin: AdminUser, db: DbSession) -> None:
     customer = await db.scalar(select(User).where(User.id == customer_id, User.role == UserRole.CUSTOMER))
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="cliente não encontrado")
     customer.is_active = False
+    record_audit(db, request, admin.id, "CUSTOMER_DEACTIVATED", "User", str(customer.id))
     await db.commit()
