@@ -221,3 +221,24 @@ class AppointmentResponse(BaseModel):
 
 class CancelAppointmentRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=255)
+
+
+class CustomerCreate(BaseModel):
+    full_name: str = Field(min_length=2, max_length=120)
+    email: str | None = Field(default=None, max_length=320)
+    phone: str | None = Field(default=None, max_length=30)
+    password: str = Field(min_length=8, max_length=128)
+
+    @model_validator(mode="after")
+    def require_contact(self) -> "CustomerCreate":
+        if not self.email and not self.phone:
+            raise ValueError("informe e-mail ou telefone")
+        return self
+
+
+class CustomerUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
+    email: str | None = Field(default=None, max_length=320)
+    phone: str | None = Field(default=None, max_length=30)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    is_active: bool | None = None
