@@ -13,10 +13,11 @@ async function logout() {
 </script>
 
 <template>
-  <v-container class="py-10">
+  <main class="dashboard-content">
+    <v-container>
     <v-row justify="center">
       <v-col cols="12" md="8" lg="6">
-        <v-card rounded="lg" elevation="4">
+        <v-card class="dashboard-card">
           <v-card-item>
             <v-card-title>Olá, {{ auth.user?.full_name }}!</v-card-title>
             <v-card-subtitle>Área inicial do cliente</v-card-subtitle>
@@ -29,5 +30,6 @@ async function logout() {
         </v-card>
       </v-col>
     </v-row>
-  </v-container>
+    </v-container>
+  </main>
 </template>

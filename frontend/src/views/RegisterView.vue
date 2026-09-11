@@ -34,29 +34,35 @@ async function submit() {
 </script>
 
 <template>
-  <v-container class="fill-height py-10">
-    <v-row align="center" justify="center">
-      <v-col cols="12" sm="8" md="5" lg="4">
-        <v-card rounded="lg" elevation="4">
-          <v-card-item>
-            <v-card-title>Criar conta</v-card-title>
-            <v-card-subtitle>Informe e-mail ou telefone</v-card-subtitle>
-          </v-card-item>
-          <v-card-text>
-            <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">{{ errorMessage }}</v-alert>
-            <v-form @submit.prevent="submit">
-              <v-text-field v-model="fullName" label="Nome completo" autocomplete="name" required />
-              <v-text-field v-model="email" label="E-mail" type="email" autocomplete="email" />
-              <v-text-field v-model="phone" label="Telefone" autocomplete="tel" />
-              <v-text-field v-model="password" label="Senha" type="password" autocomplete="new-password" hint="Mínimo de 8 caracteres" persistent-hint required />
-              <v-btn block color="primary" type="submit" class="mt-4" :loading="loading">Criar conta</v-btn>
-            </v-form>
-            <div class="text-center mt-5">
-              <router-link to="/login">Já tenho uma conta</router-link>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+  <main class="auth-shell">
+    <section class="auth-brand-panel" aria-label="Identidade da barbearia">
+      <div class="auth-brand-content">
+        <div class="auth-brand-mark" aria-hidden="true"></div>
+        <h1 class="auth-brand-title">Sistema<br />Barbearia</h1>
+        <p class="auth-brand-copy">Seu horário, no seu ritmo. Uma experiência simples para cuidar do seu estilo.</p>
+      </div>
+    </section>
+
+    <section class="auth-form-panel">
+      <v-card class="auth-form-card">
+        <v-card-item>
+          <v-card-title>Criar conta</v-card-title>
+          <v-card-subtitle>Informe e-mail ou telefone</v-card-subtitle>
+        </v-card-item>
+        <v-card-text>
+          <v-alert v-if="errorMessage" type="error" variant="tonal">{{ errorMessage }}</v-alert>
+          <v-form @submit.prevent="submit">
+            <v-text-field v-model="fullName" label="Nome completo" autocomplete="name" required />
+            <v-text-field v-model="email" label="E-mail" type="email" autocomplete="email" />
+            <v-text-field v-model="phone" label="Telefone" autocomplete="tel" />
+            <v-text-field v-model="password" label="Senha" type="password" autocomplete="new-password" hint="Mínimo de 8 caracteres" persistent-hint required />
+            <v-btn block type="submit" :loading="loading">Criar conta</v-btn>
+          </v-form>
+          <div class="auth-link-row">
+            <router-link to="/login">Já tenho uma conta</router-link>
+          </div>
+        </v-card-text>
+      </v-card>
+    </section>
+  </main>
 </template>
