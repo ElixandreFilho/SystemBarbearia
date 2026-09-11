@@ -31,7 +31,7 @@ async function submit() {
   <main class="auth-page login-page">
     <v-card class="login-card" elevation="8">
       <div class="login-brand">
-        <div class="login-est">EST. 2023</div>
+        <div class="login-est"></div>
         <v-icon icon="mdi-content-cut" class="login-scissors" aria-hidden="true" />
         <div class="login-est">BARBER SHOP</div>
         <h1>CORTES</h1>
