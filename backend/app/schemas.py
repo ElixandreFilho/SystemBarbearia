@@ -190,3 +190,9 @@ class BlockedSlotResponse(BlockedSlotBase):
 
     id: UUID
     created_by: UUID
+
+
+class AvailabilityResponse(BaseModel):
+    date: date
+    duration_minutes: int
+    slots: list[time]

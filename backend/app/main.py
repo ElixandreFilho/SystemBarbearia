@@ -6,6 +6,7 @@ from app.config import get_settings
 from app.api.auth import router as auth_router
 from app.api.services import router as services_router
 from app.api.schedule import router as schedule_router
+from app.api.availability import router as availability_router
 from app.dependencies import DbSession
 
 settings = get_settings()
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(services_router)
 app.include_router(schedule_router)
+app.include_router(availability_router)
 
 
 @app.get("/health", tags=["system"])

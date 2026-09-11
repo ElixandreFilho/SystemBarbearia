@@ -111,6 +111,44 @@ class BlockedSlot(Base):
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
 
 
+class AppointmentStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    NO_SHOW = "NO_SHOW"
+
+
+class Appointment(Base):
+    __tablename__ = "appointments"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    date: Mapped[Date] = mapped_column(index=True)
+    start_time: Mapped[Time] = mapped_column()
+    end_time: Mapped[Time] = mapped_column()
+    status: Mapped[AppointmentStatus] = mapped_column(Enum(AppointmentStatus, name="appointment_status"), default=AppointmentStatus.CONFIRMED)
+    total_price_cents: Mapped[int] = mapped_column(Integer)
+    total_duration_minutes: Mapped[int] = mapped_column(Integer)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    cancellation_reason: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AppointmentService(Base):
+    __tablename__ = "appointment_services"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    appointment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("appointments.id", ondelete="CASCADE"), index=True)
+    service_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("services.id"))
+    price_cents_snapshot: Mapped[int] = mapped_column(Integer)
+    duration_minutes_snapshot: Mapped[int] = mapped_column(Integer)
+
+
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
