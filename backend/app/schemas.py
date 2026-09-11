@@ -205,6 +205,10 @@ class AppointmentCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class AdminAppointmentCreate(AppointmentCreate):
+    customer_id: UUID
+
+
 class AppointmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -217,6 +221,25 @@ class AppointmentResponse(BaseModel):
     total_price_cents: int
     total_duration_minutes: int
     notes: str | None
+
+
+class AdminAppointmentResponse(AppointmentResponse):
+    customer_name: str
+    service_names: list[str]
+
+
+class PopularServiceResponse(BaseModel):
+    name: str
+    bookings: int
+
+
+class AdminDashboardResponse(BaseModel):
+    total_appointments: int
+    confirmed_appointments: int
+    completed_appointments: int
+    cancelled_appointments: int
+    total_revenue_cents: int
+    popular_services: list[PopularServiceResponse]
 
 
 class CancelAppointmentRequest(BaseModel):

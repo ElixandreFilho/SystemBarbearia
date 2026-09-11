@@ -12,7 +12,7 @@ from app.api.availability import get_availability
 from app.dependencies import DbSession, get_current_user, require_role
 from app.audit import record_audit
 from app.models import Appointment, AppointmentService, AppointmentStatus, BarbershopSettings, IdempotencyRecord, Service, User, UserRole
-from app.schemas import AppointmentCreate, AppointmentResponse, CancelAppointmentRequest
+from app.schemas import AdminAppointmentCreate, AdminAppointmentResponse, AdminDashboardResponse, AppointmentCreate, AppointmentResponse, CancelAppointmentRequest, PopularServiceResponse
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
 admin_router = APIRouter(prefix="/api/v1/admin/appointments", tags=["admin-appointments"])
@@ -21,6 +21,29 @@ admin_router = APIRouter(prefix="/api/v1/admin/appointments", tags=["admin-appoi
 def advisory_lock_key(target_date) -> int:
     digest = hashlib.sha256(target_date.isoformat().encode()).digest()
     return int.from_bytes(digest[:8], byteorder="big", signed=True)
+
+
+async def admin_appointment_response(db: DbSession, appointment: Appointment) -> dict:
+    customer = await db.get(User, appointment.customer_id)
+    service_names = list(await db.scalars(
+        select(Service.name)
+        .join(AppointmentService, AppointmentService.service_id == Service.id)
+        .where(AppointmentService.appointment_id == appointment.id)
+        .order_by(Service.name)
+    ))
+    return {
+        "id": appointment.id,
+        "customer_id": appointment.customer_id,
+        "date": appointment.date,
+        "start_time": appointment.start_time,
+        "end_time": appointment.end_time,
+        "status": appointment.status,
+        "total_price_cents": appointment.total_price_cents,
+        "total_duration_minutes": appointment.total_duration_minutes,
+        "notes": appointment.notes,
+        "customer_name": customer.full_name if customer else "Cliente removido",
+        "service_names": service_names,
+    }
 
 
 @router.post("", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
@@ -124,7 +147,7 @@ async def cancel_my_appointment(
     await db.commit()
 
 
-@admin_router.get("", response_model=list[AppointmentResponse])
+@admin_router.get("", response_model=list[AdminAppointmentResponse])
 async def list_admin_appointments(
     admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
     db: DbSession,
@@ -136,7 +159,87 @@ async def list_admin_appointments(
         query = query.where(Appointment.date == target_date)
     if appointment_status:
         query = query.where(Appointment.status == appointment_status)
-    return list(await db.scalars(query))
+    appointments = list(await db.scalars(query))
+    return [await admin_appointment_response(db, appointment) for appointment in appointments]
+
+
+@admin_router.post("", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
+async def create_admin_appointment(
+    payload: AdminAppointmentCreate,
+    request: Request,
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> Appointment:
+    customer = await db.scalar(select(User).where(User.id == payload.customer_id, User.role == UserRole.CUSTOMER, User.is_active.is_(True)))
+    if customer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="cliente não encontrado")
+    await db.execute(select(func.pg_advisory_xact_lock(advisory_lock_key(payload.date))))
+    availability = await get_availability(customer, db, payload.date, payload.service_ids)
+    if payload.start_time not in availability.slots:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="horário não está mais disponível")
+    services = list(await db.scalars(select(Service).where(Service.id.in_(payload.service_ids), Service.is_active.is_(True))))
+    if len(services) != len(set(payload.service_ids)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="um ou mais serviços não estão disponíveis")
+    duration = sum(service.duration_minutes for service in services)
+    appointment = Appointment(
+        customer_id=customer.id,
+        date=payload.date,
+        start_time=payload.start_time,
+        end_time=(datetime.combine(payload.date, payload.start_time) + timedelta(minutes=duration)).time(),
+        status=AppointmentStatus.CONFIRMED,
+        total_price_cents=sum(service.price_cents for service in services),
+        total_duration_minutes=duration,
+        notes=payload.notes,
+        created_by=admin.id,
+    )
+    db.add(appointment)
+    await db.flush()
+    db.add_all(
+        AppointmentService(
+            appointment_id=appointment.id,
+            service_id=service.id,
+            price_cents_snapshot=service.price_cents,
+            duration_minutes_snapshot=service.duration_minutes,
+        )
+        for service in services
+    )
+    record_audit(db, request, admin.id, "APPOINTMENT_CREATED_FOR_CUSTOMER", "Appointment", str(appointment.id), {"customer_id": str(customer.id)})
+    await db.commit()
+    await db.refresh(appointment)
+    return appointment
+
+
+@admin_router.get("/dashboard", response_model=AdminDashboardResponse)
+async def admin_dashboard(
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+    start_date: date | None = Query(default=None, alias="from"),
+    end_date: date | None = Query(default=None, alias="to"),
+) -> dict:
+    query = select(Appointment)
+    if start_date:
+        query = query.where(Appointment.date >= start_date)
+    if end_date:
+        query = query.where(Appointment.date <= end_date)
+    appointments = list(await db.scalars(query))
+    active = [item for item in appointments if item.status != AppointmentStatus.CANCELLED]
+    service_rows = await db.execute(
+        select(Service.name, func.count(AppointmentService.id))
+        .join(AppointmentService, AppointmentService.service_id == Service.id)
+        .join(Appointment, Appointment.id == AppointmentService.appointment_id)
+        .where(Appointment.status != AppointmentStatus.CANCELLED)
+        .group_by(Service.name)
+        .order_by(func.count(AppointmentService.id).desc())
+        .limit(5)
+    )
+    return {
+        "total_appointments": len(appointments),
+        "confirmed_appointments": sum(item.status == AppointmentStatus.CONFIRMED for item in appointments),
+        "completed_appointments": sum(item.status == AppointmentStatus.COMPLETED for item in appointments),
+        "cancelled_appointments": sum(item.status == AppointmentStatus.CANCELLED for item in appointments),
+        "total_revenue_cents": sum(item.total_price_cents for item in active),
+        "popular_services": [PopularServiceResponse(name=name, bookings=bookings) for name, bookings in service_rows.all()],
+    }
 
 
 @admin_router.patch("/{appointment_id}/cancel", response_model=AppointmentResponse)
