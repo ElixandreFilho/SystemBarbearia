@@ -25,7 +25,8 @@ async function submit() {
       phone: phone.value || undefined,
       password: password.value,
     })
-    await router.push(auth.user?.role === 'ADMIN' ? '/admin' : '/dashboard')
+    await auth.logout()
+    await router.push('/login')
   } catch (error) {
     errorMessage.value = error instanceof ApiError ? error.message : 'Não foi possível criar sua conta'
   } finally {

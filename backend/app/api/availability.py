@@ -65,6 +65,6 @@ async def get_availability(
     for slot in slots:
         end_dt = datetime.combine(target_date, slot) + timedelta(minutes=duration)
         candidate = TimeInterval(slot, end_dt.time())
-        if max_concurrent_overlaps(candidate, existing) < capacity:
+        if max_concurrent_overlaps(candidate, existing) < capacity and slot not in valid_slots:
             valid_slots.append(slot)
     return AvailabilityResponse(date=target_date, duration_minutes=duration, slots=valid_slots)
