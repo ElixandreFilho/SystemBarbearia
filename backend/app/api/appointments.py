@@ -1,18 +1,20 @@
 import hashlib
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.availability import get_availability
-from app.dependencies import DbSession, get_current_user
-from app.models import Appointment, AppointmentService, AppointmentStatus, IdempotencyRecord, Service, User
-from app.schemas import AppointmentCreate, AppointmentResponse
+from app.dependencies import DbSession, get_current_user, require_role
+from app.models import Appointment, AppointmentService, AppointmentStatus, BarbershopSettings, IdempotencyRecord, Service, User, UserRole
+from app.schemas import AppointmentCreate, AppointmentResponse, CancelAppointmentRequest
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
+admin_router = APIRouter(prefix="/api/v1/admin/appointments", tags=["admin-appointments"])
 
 
 def advisory_lock_key(target_date) -> int:
@@ -81,5 +83,115 @@ async def create_appointment(
     except IntegrityError as exc:
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="requisição duplicada ou inválida") from exc
+    await db.refresh(appointment)
+    return appointment
+
+
+@router.get("/me", response_model=list[AppointmentResponse])
+async def list_my_appointments(
+    user: Annotated[User, Depends(get_current_user)],
+    db: DbSession,
+    target_date: date | None = Query(default=None, alias="date"),
+    appointment_status: AppointmentStatus | None = Query(default=None, alias="status"),
+) -> list[Appointment]:
+    query = select(Appointment).where(Appointment.customer_id == user.id).order_by(Appointment.date.desc(), Appointment.start_time.desc())
+    if target_date:
+        query = query.where(Appointment.date == target_date)
+    if appointment_status:
+        query = query.where(Appointment.status == appointment_status)
+    return list(await db.scalars(query))
+
+
+@router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_my_appointment(
+    appointment_id: UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: DbSession,
+) -> None:
+    appointment = await db.get(Appointment, appointment_id)
+    if appointment is None or appointment.customer_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agendamento não encontrado")
+    if appointment.status not in (AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="agendamento não pode ser cancelado")
+    settings = await db.get(BarbershopSettings, 1) or BarbershopSettings(id=1)
+    appointment_start = datetime.combine(appointment.date, appointment.start_time, tzinfo=ZoneInfo(settings.timezone))
+    if appointment_start - datetime.now(ZoneInfo(settings.timezone)) < timedelta(minutes=settings.min_cancellation_notice_minutes):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="o prazo mínimo para cancelamento foi ultrapassado")
+    appointment.status = AppointmentStatus.CANCELLED
+    appointment.cancelled_at = datetime.now(UTC)
+    appointment.cancelled_by = user.id
+    await db.commit()
+
+
+@admin_router.get("", response_model=list[AppointmentResponse])
+async def list_admin_appointments(
+    _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+    target_date: date | None = Query(default=None, alias="date"),
+    appointment_status: AppointmentStatus | None = Query(default=None, alias="status"),
+) -> list[Appointment]:
+    query = select(Appointment).order_by(Appointment.date, Appointment.start_time)
+    if target_date:
+        query = query.where(Appointment.date == target_date)
+    if appointment_status:
+        query = query.where(Appointment.status == appointment_status)
+    return list(await db.scalars(query))
+
+
+@admin_router.patch("/{appointment_id}/cancel", response_model=AppointmentResponse)
+async def admin_cancel_appointment(
+    appointment_id: UUID,
+    payload: CancelAppointmentRequest,
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> Appointment:
+    appointment = await db.get(Appointment, appointment_id)
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agendamento não encontrado")
+    if appointment.status not in (AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="agendamento não pode ser cancelado")
+    appointment.status = AppointmentStatus.CANCELLED
+    appointment.cancelled_at = datetime.now(UTC)
+    appointment.cancelled_by = admin.id
+    appointment.cancellation_reason = payload.reason
+    await db.commit()
+    await db.refresh(appointment)
+    return appointment
+
+
+@admin_router.patch("/{appointment_id}/complete", response_model=AppointmentResponse)
+async def complete_appointment(
+    appointment_id: UUID,
+    _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> Appointment:
+    appointment = await db.get(Appointment, appointment_id)
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agendamento não encontrado")
+    if appointment.status != AppointmentStatus.CONFIRMED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="apenas agendamentos confirmados podem ser concluídos")
+    appointment.status = AppointmentStatus.COMPLETED
+    await db.commit()
+    await db.refresh(appointment)
+    return appointment
+
+
+@admin_router.patch("/{appointment_id}/no-show", response_model=AppointmentResponse)
+async def mark_no_show(
+    appointment_id: UUID,
+    _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> Appointment:
+    appointment = await db.get(Appointment, appointment_id)
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agendamento não encontrado")
+    if appointment.status != AppointmentStatus.CONFIRMED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="apenas agendamentos confirmados podem virar no-show")
+    settings = await db.get(BarbershopSettings, 1) or BarbershopSettings(id=1)
+    appointment_end = datetime.combine(appointment.date, appointment.end_time, tzinfo=ZoneInfo(settings.timezone))
+    if appointment_end + timedelta(minutes=settings.no_show_grace_minutes) > datetime.now(ZoneInfo(settings.timezone)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="o horário ainda não ultrapassou a tolerância de no-show")
+    appointment.status = AppointmentStatus.NO_SHOW
+    await db.commit()
     await db.refresh(appointment)
     return appointment

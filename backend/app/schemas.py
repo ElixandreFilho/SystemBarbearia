@@ -217,3 +217,7 @@ class AppointmentResponse(BaseModel):
     total_price_cents: int
     total_duration_minutes: int
     notes: str | None
+
+
+class CancelAppointmentRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=255)
