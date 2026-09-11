@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "postgresql+asyncpg://barbearia:barbearia@localhost:5432/barbearia"
     frontend_origin: str = "http://localhost:5173"
+    frontend_origins: str = "http://localhost:5173,http://localhost:5174"
     barbershop_timezone: str = "America/Fortaleza"
     jwt_secret_key: str = "development-only-change-me"
     jwt_access_token_expire_minutes: int = 15
