@@ -21,22 +21,28 @@ interface BusinessHour {
   end_time: string
 }
 
-interface DayForm extends BusinessHour {
+interface DayForm {
+  weekday: number
   label: string
-  enabled: boolean
+  morningEnabled: boolean
+  morningStart: string
+  morningEnd: string
+  afternoonEnabled: boolean
+  afternoonStart: string
+  afternoonEnd: string
 }
 
 const router = useRouter()
 const auth = useAuthStore()
 const services = ref<Service[]>([])
 const days = ref<DayForm[]>([
-  { weekday: 0, label: 'Segunda-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 1, label: 'Terça-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 2, label: 'Quarta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 3, label: 'Quinta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 4, label: 'Sexta-feira', enabled: false, start_time: '09:00', end_time: '18:00' },
-  { weekday: 5, label: 'Sábado', enabled: false, start_time: '09:00', end_time: '14:00' },
-  { weekday: 6, label: 'Domingo', enabled: false, start_time: '09:00', end_time: '14:00' },
+  { weekday: 0, label: 'Segunda-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
+  { weekday: 1, label: 'Terça-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
+  { weekday: 2, label: 'Quarta-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
+  { weekday: 3, label: 'Quinta-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
+  { weekday: 4, label: 'Sexta-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
+  { weekday: 5, label: 'Sábado', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '14:00' },
+  { weekday: 6, label: 'Domingo', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '14:00' },
 ])
 const form = ref({ id: '', name: '', description: '', price: '', duration: '30' })
 const loading = ref(true)
@@ -77,9 +83,17 @@ async function loadAdminData() {
     hourData.forEach((hour) => {
       const day = days.value.find((item) => item.weekday === hour.weekday)
       if (day) {
-        day.enabled = true
-        day.start_time = hour.start_time.slice(0, 5)
-        day.end_time = hour.end_time.slice(0, 5)
+        const start = hour.start_time.slice(0, 5)
+        const end = hour.end_time.slice(0, 5)
+        if (start < '14:00') {
+          day.morningEnabled = true
+          day.morningStart = start
+          day.morningEnd = end
+        } else {
+          day.afternoonEnabled = true
+          day.afternoonStart = start
+          day.afternoonEnd = end
+        }
       }
     })
   } catch (error) {
@@ -136,11 +150,12 @@ async function saveBusinessHours() {
   savingHours.value = true
   errorMessage.value = ''
   try {
-    const payload = days.value.filter((day) => day.enabled).map(({ weekday, start_time, end_time }) => ({
-      weekday,
-      start_time: `${start_time}:00`,
-      end_time: `${end_time}:00`,
-    }))
+    const payload = days.value.flatMap((day) => {
+      const intervals = []
+      if (day.morningEnabled) intervals.push({ weekday: day.weekday, start_time: `${day.morningStart}:00`, end_time: `${day.morningEnd}:00` })
+      if (day.afternoonEnabled) intervals.push({ weekday: day.weekday, start_time: `${day.afternoonStart}:00`, end_time: `${day.afternoonEnd}:00` })
+      return intervals
+    })
     await apiRequest<BusinessHour[]>('/admin/business-hours', { method: 'PUT', body: JSON.stringify(payload) }, token())
     successMessage.value = 'Horários de funcionamento atualizados.'
   } catch (error) {
@@ -206,10 +221,19 @@ onMounted(loadAdminData)
               </div>
             </div>
             <div v-for="day in days" :key="day.weekday" class="day-row">
-              <v-checkbox v-model="day.enabled" :label="day.label" hide-details color="steel-blue" />
-              <v-text-field v-model="day.start_time" type="time" variant="outlined" density="compact" hide-details :disabled="!day.enabled" />
-              <span class="day-separator">até</span>
-              <v-text-field v-model="day.end_time" type="time" variant="outlined" density="compact" hide-details :disabled="!day.enabled" />
+              <strong class="day-label">{{ day.label }}</strong>
+              <div class="day-period">
+                <v-checkbox v-model="day.morningEnabled" label="Manhã" hide-details color="steel-blue" />
+                <v-text-field v-model="day.morningStart" type="time" variant="outlined" density="compact" hide-details :disabled="!day.morningEnabled" />
+                <span class="day-separator">até</span>
+                <v-text-field v-model="day.morningEnd" type="time" variant="outlined" density="compact" hide-details :disabled="!day.morningEnabled" />
+              </div>
+              <div class="day-period">
+                <v-checkbox v-model="day.afternoonEnabled" label="Tarde" hide-details color="steel-blue" />
+                <v-text-field v-model="day.afternoonStart" type="time" variant="outlined" density="compact" hide-details :disabled="!day.afternoonEnabled" />
+                <span class="day-separator">até</span>
+                <v-text-field v-model="day.afternoonEnd" type="time" variant="outlined" density="compact" hide-details :disabled="!day.afternoonEnabled" />
+              </div>
             </div>
             <v-btn class="save-button" :loading="savingHours" @click="saveBusinessHours">Salvar horários</v-btn>
           </section>
@@ -259,12 +283,15 @@ onMounted(loadAdminData)
 .service-row--inactive { opacity: 0.58; }
 .row-actions { display: flex; align-items: center; gap: 4px; }
 .row-actions :deep(.v-chip) { border-radius: 4px; }
-.day-row :deep(.v-checkbox) { min-width: 190px; }
-.day-row :deep(.v-input) { max-width: 140px; }
+.day-row { align-items: flex-start; flex-wrap: wrap; }
+.day-label { min-width: 130px; padding-top: 12px; }
+.day-period { display: flex; flex: 1 1 330px; align-items: center; gap: 8px; }
+.day-period :deep(.v-checkbox) { min-width: 92px; }
+.day-period :deep(.v-input) { max-width: 120px; }
 .day-separator { color: var(--slate); font-size: 0.8rem; }
 .save-button { min-height: 46px; margin-top: 20px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
 .logout-button { color: var(--steel-blue); text-transform: none; }
 .empty-state { padding: 32px 0; color: var(--slate); }
 @media (max-width: 960px) { .form-panel { position: static; } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-row { flex-wrap: wrap; } .day-row :deep(.v-checkbox) { min-width: 100%; } .day-row :deep(.v-input) { flex: 1; } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } }
 </style>
