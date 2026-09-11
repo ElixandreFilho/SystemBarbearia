@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
     refresh_cookie_secure: bool = False
+    resend_api_key: str | None = None
+    resend_from_email: str = "Barbearia <noreply@example.com>"
+    app_base_url: str = "http://localhost:5173"
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 

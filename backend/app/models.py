@@ -181,3 +181,24 @@ class AuditLog(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text)
     ip_address: Mapped[str | None] = mapped_column(String(45))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NotificationStatus(str, enum.Enum):
+    SKIPPED = "SKIPPED"
+    SENT = "SENT"
+    FAILED = "FAILED"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    recipient: Mapped[str] = mapped_column(String(320))
+    event: Mapped[str] = mapped_column(String(100))
+    channel: Mapped[str] = mapped_column(String(50), default="email")
+    status: Mapped[NotificationStatus] = mapped_column(Enum(NotificationStatus, name="notification_status"))
+    provider_message_id: Mapped[str | None] = mapped_column(String(255))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    payload_json: Mapped[str | None] = mapped_column(Text)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

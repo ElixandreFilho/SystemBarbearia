@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from app.config import get_settings
 from app.dependencies import DbSession, get_current_user
 from app.models import PasswordResetToken, RefreshToken, User, UserRole
+from app.notifications import send_email
 from app.schemas import (
     AuthResponse,
     LoginRequest,
@@ -70,6 +71,14 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
     try:
         await db.flush()
         raw_refresh = await persist_refresh_token(db, user, request)
+        if user.email:
+            await send_email(
+                db,
+                user.email,
+                "REGISTRATION_CONFIRMED",
+                "Cadastro confirmado | Barbearia",
+                f"<p>Olá, {user.full_name}.</p><p>Seu cadastro na barbearia foi confirmado.</p>",
+            )
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
@@ -160,8 +169,16 @@ async def request_password_reset(payload: PasswordResetRequest, db: DbSession) -
     if user:
         raw_token = create_opaque_token()
         db.add(PasswordResetToken(user_id=user.id, token_hash=hash_token(raw_token), expires_at=datetime.now(UTC) + timedelta(minutes=30)))
+        if user.email:
+            reset_url = f"{get_settings().app_base_url}/reset-password?token={raw_token}"
+            await send_email(
+                db,
+                user.email,
+                "PASSWORD_RESET_REQUESTED",
+                "Redefinição de senha | Barbearia",
+                f"<p>Olá, {user.full_name}.</p><p><a href=\"{reset_url}\">Redefina sua senha</a>. O link expira em 30 minutos.</p>",
+            )
         await db.commit()
-        # O envio por Resend entra na implementação de notificações da Fase 7.
     return {"message": "se os dados estiverem corretos, você receberá instruções para redefinir a senha"}
 
 
