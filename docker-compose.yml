@@ -25,6 +25,9 @@ services:
       ENVIRONMENT: development
       FRONTEND_ORIGIN: http://localhost:5173
       BARBERSHOP_TIMEZONE: America/Fortaleza
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      APP_BASE_URL: ${APP_BASE_URL}
     ports:
       - "8000:8000"
     volumes:
