@@ -166,7 +166,7 @@ async def admin_cancel_appointment(
 async def complete_appointment(
     appointment_id: UUID,
     request: Request,
-    _: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
     db: DbSession,
 ) -> Appointment:
     appointment = await db.get(Appointment, appointment_id)
