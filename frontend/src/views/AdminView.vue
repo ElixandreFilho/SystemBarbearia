@@ -83,6 +83,7 @@ const saving = ref(false)
 const savingHours = ref(false)
 const loadingAppointments = ref(false)
 const creatingAppointment = ref(false)
+const adminSection = ref('appointments')
 const filterDate = ref(formatDate(new Date()))
 const filterStatus = ref('')
 const manualDate = ref(formatDate(new Date()))
@@ -221,6 +222,20 @@ async function createManualAppointment() {
   }
 }
 
+async function cancelAdminAppointment(appointment: AdminAppointment) {
+  if (!window.confirm(`Cancelar o agendamento de ${appointment.customer_name}?`)) return
+  try {
+    await apiRequest<AdminAppointment>(`/admin/appointments/${appointment.id}/cancel`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason: 'Cancelado pelo administrador' }),
+    }, token())
+    successMessage.value = 'Agendamento cancelado.'
+    await Promise.all([loadAppointments(), loadStats()])
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível cancelar o agendamento.'
+  }
+}
+
 async function saveService() {
   const price = Number(form.value.price.replace(',', '.'))
   const duration = Number(form.value.duration)
@@ -306,12 +321,31 @@ onMounted(async () => {
         <v-btn class="logout-button" variant="text" @click="logout">Sair</v-btn>
       </header>
 
+      <nav class="admin-navigation" aria-label="Navegação administrativa">
+        <button
+          v-for="item in [
+            { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
+            { key: 'appointments', label: 'Agendamentos', icon: 'mdi-calendar-month-outline' },
+            { key: 'services', label: 'Serviços', icon: 'mdi-content-cut' },
+            { key: 'settings', label: 'Configurações', icon: 'mdi-cog-outline' },
+          ]"
+          :key="item.key"
+          class="admin-nav-item"
+          :class="{ 'admin-nav-item--active': adminSection === item.key }"
+          type="button"
+          @click="adminSection = item.key"
+        >
+          <v-icon :icon="item.icon" size="19" />
+          <span>{{ item.label }}</span>
+        </button>
+      </nav>
+
       <v-alert v-if="errorMessage" type="error" variant="tonal" closable @click:close="errorMessage = ''">{{ errorMessage }}</v-alert>
       <v-alert v-if="successMessage" type="success" variant="tonal" closable @click:close="successMessage = ''">{{ successMessage }}</v-alert>
       <v-progress-linear v-if="loading" indeterminate color="steel-blue" class="loading-line" />
 
       <v-row v-else class="admin-grid">
-        <v-col cols="12">
+        <v-col v-if="adminSection === 'dashboard'" cols="12">
           <section class="metrics-grid">
             <article class="metric-card">
               <span>Agendamentos</span>
@@ -336,7 +370,7 @@ onMounted(async () => {
           </section>
         </v-col>
 
-        <v-col cols="12" lg="7">
+        <v-col v-if="adminSection === 'appointments'" cols="12" lg="7">
           <section class="admin-section agenda-section">
             <div class="section-heading">
               <div>
@@ -356,12 +390,17 @@ onMounted(async () => {
                 <strong>{{ formatTime(appointment.start_time) }} · {{ appointment.customer_name }}</strong>
                 <span>{{ appointment.service_names.join(' · ') }} · {{ formatMoney(appointment.total_price_cents) }}</span>
               </div>
-              <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
+              <div class="appointment-row-actions">
+                <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
+                <v-btn v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)" class="cancel-appointment-button" variant="outlined" size="small" @click="cancelAdminAppointment(appointment)">
+                  Cancelar
+                </v-btn>
+              </div>
             </div>
           </section>
         </v-col>
 
-        <v-col cols="12" lg="5">
+        <v-col v-if="adminSection === 'appointments'" cols="12" lg="5">
           <section class="form-panel manual-panel">
             <p class="section-kicker">Operação</p>
             <h2>Agendar cliente</h2>
@@ -377,8 +416,8 @@ onMounted(async () => {
           </section>
         </v-col>
 
-        <v-col cols="12" lg="7">
-          <section class="admin-section">
+        <v-col v-if="adminSection === 'services' || adminSection === 'settings'" cols="12" lg="7">
+          <section v-if="adminSection === 'services'" class="admin-section">
             <div class="section-heading">
               <div>
                 <p class="section-kicker">Catálogo</p>
@@ -400,7 +439,7 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section class="admin-section">
+          <section v-if="adminSection === 'settings'" class="admin-section">
             <div class="section-heading">
               <div>
                 <p class="section-kicker">Agenda</p>
@@ -426,7 +465,7 @@ onMounted(async () => {
           </section>
         </v-col>
 
-        <v-col cols="12" lg="5">
+        <v-col v-if="adminSection === 'services'" cols="12" lg="5">
           <section class="form-panel">
             <p class="section-kicker">{{ editing() ? 'Editar serviço' : 'Novo serviço' }}</p>
             <h2>{{ editing() ? 'Atualizar serviço' : 'Cadastrar serviço' }}</h2>
@@ -454,6 +493,10 @@ onMounted(async () => {
 .admin-intro h1, .section-heading h2, .form-panel h2 { margin: 0; color: var(--ink); font-family: 'Instrument Serif', serif; font-weight: 400; }
 .admin-intro h1 { font-size: clamp(2.3rem, 5vw, 3.5rem); line-height: 1; }
 .admin-intro p:not(.section-kicker) { margin: 12px 0 0; color: var(--slate); }
+.admin-navigation { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
+.admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 0.84rem; font-weight: 600; transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease; }
+.admin-nav-item:hover, .admin-nav-item--active { border-color: rgba(93, 138, 196, 0.48); background: rgba(93, 138, 196, 0.12); color: var(--navy); }
+.admin-nav-item--active { box-shadow: inset 0 -2px 0 var(--steel-blue); }
 .section-kicker { margin: 0 0 8px; color: var(--steel-blue); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .section-heading h2, .form-panel h2 { font-size: 2rem; line-height: 1.05; }
 .admin-section, .form-panel { border: 1px solid var(--hairline); padding: 24px; background: rgba(255, 255, 255, 0.3); }
@@ -472,7 +515,9 @@ onMounted(async () => {
 .appointment-row:last-child { border-bottom: 0; }
 .appointment-row strong, .appointment-row span { display: block; }
 .appointment-row span { margin-top: 5px; color: var(--slate); font-size: 0.8rem; }
-.appointment-row :deep(.v-chip) { border-radius: 4px; }
+.appointment-row-actions { display: flex; align-items: center; gap: 8px; }
+.appointment-row-actions :deep(.v-chip) { border-radius: 4px; }
+.cancel-appointment-button { border-color: rgba(139, 150, 168, 0.5) !important; border-radius: 4px !important; color: var(--slate) !important; text-transform: none; }
 .manual-panel { height: 100%; }
 .manual-panel .section-kicker { color: var(--steel-blue); }
 .manual-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: -4px 0 20px; }
@@ -498,5 +543,5 @@ onMounted(async () => {
 .logout-button { color: var(--steel-blue); text-transform: none; }
 .empty-state { padding: 32px 0; color: var(--slate); }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); } .admin-nav-item { min-height: 46px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
