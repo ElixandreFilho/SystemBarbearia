@@ -11,6 +11,9 @@ backend/.env
 node_modules/
 frontend/dist/
 frontend/.env
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
 # Local infrastructure
 .env
