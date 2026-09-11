@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.dependencies import DbSession, get_current_user
 from app.models import Appointment, AppointmentStatus, BarbershopSettings, BlockedSlot, BusinessHours, Service, SpecialDate, User
 from app.schemas import AvailabilityResponse
@@ -26,11 +27,14 @@ async def get_availability(
         raise HTTPException(status_code=400, detail="um ou mais serviços não estão disponíveis")
     duration = sum(service.duration_minutes for service in services)
     settings = await db.get(BarbershopSettings, 1)
-    if settings is None:
-        settings = BarbershopSettings(id=1)
-    tz = ZoneInfo(settings.timezone)
+    app_settings = get_settings()
+    timezone_name = settings.timezone if settings and settings.timezone else app_settings.barbershop_timezone
+    booking_window_days = settings.booking_window_days if settings and settings.booking_window_days is not None else 2
+    slot_granularity_minutes = settings.slot_granularity_minutes if settings and settings.slot_granularity_minutes is not None else 15
+    capacity = settings.capacity if settings and settings.capacity is not None else 1
+    tz = ZoneInfo(timezone_name)
     now = datetime.now(tz)
-    if target_date < now.date() or (target_date - now.date()).days > settings.booking_window_days:
+    if target_date < now.date() or (target_date - now.date()).days > booking_window_days:
         return AvailabilityResponse(date=target_date, duration_minutes=duration, slots=[])
 
     special = await db.scalar(select(SpecialDate).where(SpecialDate.date == target_date))
@@ -47,7 +51,7 @@ async def get_availability(
     slots = generate_candidate_slots(
         open_windows,
         duration,
-        settings.slot_granularity_minutes,
+        slot_granularity_minutes,
         now=now.replace(tzinfo=None) if target_date == now.date() else None,
         target_date=target_date,
     )
@@ -59,6 +63,6 @@ async def get_availability(
     for slot in slots:
         end_dt = datetime.combine(target_date, slot) + timedelta(minutes=duration)
         candidate = TimeInterval(slot, end_dt.time())
-        if max_concurrent_overlaps(candidate, existing) < settings.capacity:
+        if max_concurrent_overlaps(candidate, existing) < capacity:
             valid_slots.append(slot)
     return AvailabilityResponse(date=target_date, duration_minutes=duration, slots=valid_slots)
