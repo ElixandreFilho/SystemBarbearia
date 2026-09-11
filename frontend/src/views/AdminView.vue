@@ -21,6 +21,36 @@ interface BusinessHour {
   end_time: string
 }
 
+interface Customer {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+}
+
+interface AdminAppointment {
+  id: string
+  customer_id: string
+  customer_name: string
+  service_names: string[]
+  date: string
+  start_time: string
+  end_time: string
+  status: string
+  total_price_cents: number
+  total_duration_minutes: number
+  notes: string | null
+}
+
+interface DashboardStats {
+  total_appointments: number
+  confirmed_appointments: number
+  completed_appointments: number
+  cancelled_appointments: number
+  total_revenue_cents: number
+  popular_services: { name: string; bookings: number }[]
+}
+
 interface DayForm {
   weekday: number
   label: string
@@ -35,6 +65,9 @@ interface DayForm {
 const router = useRouter()
 const auth = useAuthStore()
 const services = ref<Service[]>([])
+const customers = ref<Customer[]>([])
+const appointments = ref<AdminAppointment[]>([])
+const stats = ref<DashboardStats | null>(null)
 const days = ref<DayForm[]>([
   { weekday: 0, label: 'Segunda-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
   { weekday: 1, label: 'Terça-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
@@ -48,11 +81,22 @@ const form = ref({ id: '', name: '', description: '', price: '', duration: '30' 
 const loading = ref(true)
 const saving = ref(false)
 const savingHours = ref(false)
+const loadingAppointments = ref(false)
+const creatingAppointment = ref(false)
+const filterDate = ref(formatDate(new Date()))
+const filterStatus = ref('')
+const manualDate = ref(formatDate(new Date()))
+const manualCustomerId = ref('')
+const manualServiceIds = ref<string[]>([])
+const manualSlot = ref('')
+const manualSlots = ref<string[]>([])
+const manualNotes = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const token = () => auth.accessToken ?? undefined
 
 const editing = () => Boolean(form.value.id)
+const activeServices = () => services.value.filter((service) => service.is_active)
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
@@ -75,11 +119,13 @@ function editService(service: Service) {
 async function loadAdminData() {
   loading.value = true
   try {
-    const [serviceData, hourData] = await Promise.all([
+    const [serviceData, hourData, customerData] = await Promise.all([
       apiRequest<Service[]>('/admin/services', {}, token()),
       apiRequest<BusinessHour[]>('/admin/business-hours', {}, token()),
+      apiRequest<Customer[]>('/admin/customers?limit=100', {}, token()),
     ])
     services.value = serviceData
+    customers.value = customerData
     hourData.forEach((hour) => {
       const day = days.value.find((item) => item.weekday === hour.weekday)
       if (day) {
@@ -100,6 +146,78 @@ async function loadAdminData() {
     errorMessage.value = error instanceof Error ? error.message : 'Não foi possível carregar a área administrativa.'
   } finally {
     loading.value = false
+  }
+}
+
+function formatDate(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function formatTime(value: string) {
+  return value.slice(0, 5)
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = { PENDING: 'Pendente', CONFIRMED: 'Confirmado', COMPLETED: 'Concluído', CANCELLED: 'Cancelado', NO_SHOW: 'Não compareceu' }
+  return labels[status] ?? status
+}
+
+function statusColor(status: string) {
+  return status === 'CANCELLED' || status === 'NO_SHOW' ? 'slate' : 'steel-blue'
+}
+
+async function loadAppointments() {
+  loadingAppointments.value = true
+  try {
+    const query = new URLSearchParams()
+    if (filterDate.value) query.set('date', filterDate.value)
+    if (filterStatus.value) query.set('status', filterStatus.value)
+    appointments.value = await apiRequest<AdminAppointment[]>(`/admin/appointments?${query.toString()}`, {}, token())
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível carregar os agendamentos.'
+  } finally {
+    loadingAppointments.value = false
+  }
+}
+
+async function loadStats() {
+  try {
+    stats.value = await apiRequest<DashboardStats>('/admin/appointments/dashboard', {}, token())
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível carregar os indicadores.'
+  }
+}
+
+async function loadManualSlots() {
+  manualSlot.value = ''
+  manualSlots.value = []
+  if (!manualDate.value || !manualServiceIds.value.length) return
+  try {
+    const query = new URLSearchParams({ date: manualDate.value })
+    manualServiceIds.value.forEach((id) => query.append('service_ids', id))
+    const availability = await apiRequest<{ slots: string[] }>(`/availability?${query.toString()}`, {}, token())
+    manualSlots.value = [...new Set(availability.slots)]
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível consultar os horários.'
+  }
+}
+
+async function createManualAppointment() {
+  if (!manualCustomerId.value || !manualServiceIds.value.length || !manualSlot.value) return
+  creatingAppointment.value = true
+  try {
+    await apiRequest<AdminAppointment>('/admin/appointments', {
+      method: 'POST',
+      body: JSON.stringify({ customer_id: manualCustomerId.value, date: manualDate.value, start_time: manualSlot.value, service_ids: manualServiceIds.value, notes: manualNotes.value.trim() || undefined }),
+    }, token())
+    successMessage.value = 'Agendamento criado para o cliente.'
+    manualSlot.value = ''
+    manualNotes.value = ''
+    await Promise.all([loadAppointments(), loadStats(), loadManualSlots()])
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível criar o agendamento.'
+  } finally {
+    creatingAppointment.value = false
   }
 }
 
@@ -170,7 +288,10 @@ async function logout() {
   await router.push('/login')
 }
 
-onMounted(loadAdminData)
+onMounted(async () => {
+  await loadAdminData()
+  await Promise.all([loadAppointments(), loadStats()])
+})
 </script>
 
 <template>
@@ -190,6 +311,72 @@ onMounted(loadAdminData)
       <v-progress-linear v-if="loading" indeterminate color="steel-blue" class="loading-line" />
 
       <v-row v-else class="admin-grid">
+        <v-col cols="12">
+          <section class="metrics-grid">
+            <article class="metric-card">
+              <span>Agendamentos</span>
+              <strong>{{ stats?.total_appointments ?? 0 }}</strong>
+              <small>{{ stats?.confirmed_appointments ?? 0 }} confirmados</small>
+            </article>
+            <article class="metric-card">
+              <span>Faturamento previsto</span>
+              <strong>{{ formatMoney(stats?.total_revenue_cents ?? 0) }}</strong>
+              <small>Reservas não canceladas</small>
+            </article>
+            <article class="metric-card">
+              <span>Concluídos</span>
+              <strong>{{ stats?.completed_appointments ?? 0 }}</strong>
+              <small>Atendimentos realizados</small>
+            </article>
+            <article class="metric-card metric-card--accent">
+              <span>Mais procurado</span>
+              <strong>{{ stats?.popular_services?.[0]?.name || 'Ainda sem dados' }}</strong>
+              <small>{{ stats?.popular_services?.[0]?.bookings || 0 }} agendamento(s)</small>
+            </article>
+          </section>
+        </v-col>
+
+        <v-col cols="12" lg="7">
+          <section class="admin-section agenda-section">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">Operação</p>
+                <h2>Agendamentos</h2>
+              </div>
+              <v-btn variant="outlined" color="slate" @click="filterDate = ''; loadAppointments()">Ver todos</v-btn>
+            </div>
+            <div class="filter-bar">
+              <v-text-field v-model="filterDate" label="Filtrar por data" type="date" variant="outlined" density="compact" hide-details @change="loadAppointments" />
+              <v-select v-model="filterStatus" label="Status" :items="[{ title: 'Todos', value: '' }, { title: 'Confirmados', value: 'CONFIRMED' }, { title: 'Concluídos', value: 'COMPLETED' }, { title: 'Cancelados', value: 'CANCELLED' }]" variant="outlined" density="compact" hide-details @update:model-value="loadAppointments" />
+            </div>
+            <v-progress-linear v-if="loadingAppointments" indeterminate color="steel-blue" />
+            <div v-else-if="!appointments.length" class="empty-state">Nenhum agendamento encontrado para este filtro.</div>
+            <div v-for="appointment in appointments" :key="appointment.id" class="appointment-row">
+              <div>
+                <strong>{{ formatTime(appointment.start_time) }} · {{ appointment.customer_name }}</strong>
+                <span>{{ appointment.service_names.join(' · ') }} · {{ formatMoney(appointment.total_price_cents) }}</span>
+              </div>
+              <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
+            </div>
+          </section>
+        </v-col>
+
+        <v-col cols="12" lg="5">
+          <section class="form-panel manual-panel">
+            <p class="section-kicker">Operação</p>
+            <h2>Agendar cliente</h2>
+            <v-select v-model="manualCustomerId" label="Cliente" :items="customers" item-title="full_name" item-value="id" variant="outlined" />
+            <v-select v-model="manualServiceIds" label="Serviços" :items="activeServices()" item-title="name" item-value="id" multiple chips variant="outlined" @update:model-value="loadManualSlots" />
+            <v-text-field v-model="manualDate" label="Data" type="date" variant="outlined" @change="loadManualSlots" />
+            <div class="manual-slots">
+              <v-btn v-for="slot in manualSlots" :key="slot" class="manual-slot" :class="{ 'manual-slot--selected': manualSlot === slot }" variant="outlined" size="small" @click="manualSlot = slot">{{ formatTime(slot) }}</v-btn>
+              <span v-if="!manualSlots.length" class="empty-slots">Selecione serviços e data.</span>
+            </div>
+            <v-textarea v-model="manualNotes" label="Observações" rows="2" variant="outlined" />
+            <v-btn class="save-button" block :loading="creatingAppointment" :disabled="!manualCustomerId || !manualServiceIds.length || !manualSlot" @click="createManualAppointment">Confirmar agendamento</v-btn>
+          </section>
+        </v-col>
+
         <v-col cols="12" lg="7">
           <section class="admin-section">
             <div class="section-heading">
@@ -274,6 +461,24 @@ onMounted(loadAdminData)
 .form-panel h2 { margin-bottom: 24px; color: var(--paper); }
 .form-panel :deep(.v-label), .form-panel :deep(input), .form-panel :deep(textarea) { color: var(--paper); }
 .form-panel :deep(.v-field__outline) { color: rgba(244, 246, 249, 0.4); }
+.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.metric-card { min-height: 132px; padding: 20px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.3); }
+.metric-card--accent { border-color: rgba(93, 138, 196, 0.55); background: rgba(93, 138, 196, 0.08); }
+.metric-card span, .metric-card small { display: block; color: var(--slate); font-size: 0.78rem; }
+.metric-card strong { display: block; overflow: hidden; margin: 10px 0 8px; color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.agenda-section { height: 100%; }
+.filter-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 12px; }
+.appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); }
+.appointment-row:last-child { border-bottom: 0; }
+.appointment-row strong, .appointment-row span { display: block; }
+.appointment-row span { margin-top: 5px; color: var(--slate); font-size: 0.8rem; }
+.appointment-row :deep(.v-chip) { border-radius: 4px; }
+.manual-panel { height: 100%; }
+.manual-panel .section-kicker { color: var(--steel-blue); }
+.manual-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: -4px 0 20px; }
+.manual-slot { border-color: rgba(244, 246, 249, 0.3) !important; border-radius: 4px !important; color: var(--paper) !important; }
+.manual-slot--selected { border-color: var(--steel-blue) !important; background: var(--steel-blue) !important; }
+.manual-slots .empty-slots { grid-column: 1 / -1; min-height: 48px; font-size: 0.78rem; }
 .admin-section + .admin-section { margin-top: 24px; }
 .loading-line { margin: 24px 0; }
 .service-row, .day-row { padding: 16px 0; border-bottom: 1px solid var(--hairline); }
@@ -292,6 +497,6 @@ onMounted(loadAdminData)
 .save-button { min-height: 46px; margin-top: 20px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
 .logout-button { color: var(--steel-blue); text-transform: none; }
 .empty-state { padding: 32px 0; color: var(--slate); }
-@media (max-width: 960px) { .form-panel { position: static; } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } }
+@media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
