@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date as Date, datetime, time as Time
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -64,6 +64,51 @@ class Service(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class BarbershopSettings(Base):
+    __tablename__ = "barbershop_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    name: Mapped[str] = mapped_column(String(160), default="Barbearia")
+    timezone: Mapped[str] = mapped_column(String(64), default="America/Fortaleza")
+    capacity: Mapped[int] = mapped_column(Integer, default=1)
+    booking_window_days: Mapped[int] = mapped_column(Integer, default=2)
+    min_cancellation_notice_minutes: Mapped[int] = mapped_column(Integer, default=60)
+    no_show_grace_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    slot_granularity_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class BusinessHours(Base):
+    __tablename__ = "business_hours"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    weekday: Mapped[int] = mapped_column(Integer, index=True)
+    start_time: Mapped[Time] = mapped_column()
+    end_time: Mapped[Time] = mapped_column()
+
+
+class SpecialDate(Base):
+    __tablename__ = "special_dates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    date: Mapped[Date] = mapped_column(unique=True, index=True)
+    is_closed: Mapped[bool] = mapped_column(Boolean, default=False)
+    custom_open_time: Mapped[Time | None] = mapped_column()
+    custom_close_time: Mapped[Time | None] = mapped_column()
+    label: Mapped[str | None] = mapped_column(String(160))
+
+
+class BlockedSlot(Base):
+    __tablename__ = "blocked_slots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    date: Mapped[Date] = mapped_column(index=True)
+    start_time: Mapped[Time] = mapped_column()
+    end_time: Mapped[Time] = mapped_column()
+    reason: Mapped[str | None] = mapped_column(String(255))
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
 
 
 class PasswordResetToken(Base):
