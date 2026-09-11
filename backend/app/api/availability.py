@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Annotated
 from zoneinfo import ZoneInfo
 from uuid import UUID
@@ -30,8 +30,8 @@ async def get_availability(
     app_settings = get_settings()
     timezone_name = settings.timezone if settings and settings.timezone else app_settings.barbershop_timezone
     booking_window_days = settings.booking_window_days if settings and settings.booking_window_days is not None else 2
-    slot_granularity_minutes = settings.slot_granularity_minutes if settings and settings.slot_granularity_minutes is not None else 15
-    capacity = settings.capacity if settings and settings.capacity is not None else 1
+    slot_granularity_minutes = settings.slot_granularity_minutes if settings and settings.slot_granularity_minutes is not None else 30
+    capacity = settings.capacity if settings and settings.capacity is not None else 2
     tz = ZoneInfo(timezone_name)
     now = datetime.now(tz)
     if target_date < now.date() or (target_date - now.date()).days > booking_window_days:
@@ -47,7 +47,9 @@ async def get_availability(
         windows = [TimeInterval(row.start_time, row.end_time) for row in weekday_hours]
 
     blocks = list(await db.scalars(select(BlockedSlot).where(BlockedSlot.date == target_date)))
-    open_windows = [segment for window in windows for segment in subtract_intervals(window, [TimeInterval(row.start_time, row.end_time) for row in blocks])]
+    lunch_break = TimeInterval(time(12, 0), time(14, 0))
+    blocked_intervals = [lunch_break, *[TimeInterval(row.start_time, row.end_time) for row in blocks]]
+    open_windows = [segment for window in windows for segment in subtract_intervals(window, blocked_intervals)]
     slots = generate_candidate_slots(
         open_windows,
         duration,

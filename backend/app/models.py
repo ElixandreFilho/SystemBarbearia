@@ -72,11 +72,11 @@ class BarbershopSettings(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     name: Mapped[str] = mapped_column(String(160), default="Barbearia")
     timezone: Mapped[str] = mapped_column(String(64), default="America/Fortaleza")
-    capacity: Mapped[int] = mapped_column(Integer, default=1)
+    capacity: Mapped[int] = mapped_column(Integer, default=2)
     booking_window_days: Mapped[int] = mapped_column(Integer, default=2)
     min_cancellation_notice_minutes: Mapped[int] = mapped_column(Integer, default=60)
     no_show_grace_minutes: Mapped[int] = mapped_column(Integer, default=30)
-    slot_granularity_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    slot_granularity_minutes: Mapped[int] = mapped_column(Integer, default=30)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
