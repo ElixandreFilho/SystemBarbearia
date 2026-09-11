@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 
 import { apiRequest } from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import type { User } from '../types/auth'
 
 interface Service {
   id: string
@@ -51,6 +52,17 @@ interface DashboardStats {
   popular_services: { name: string; bookings: number }[]
 }
 
+interface ShopSettings {
+  id: number
+  name: string
+  timezone: string
+  capacity: number
+  booking_window_days: number
+  min_cancellation_notice_minutes: number
+  no_show_grace_minutes: number
+  slot_granularity_minutes: number
+}
+
 interface DayForm {
   weekday: number
   label: string
@@ -84,6 +96,11 @@ const savingHours = ref(false)
 const loadingAppointments = ref(false)
 const creatingAppointment = ref(false)
 const adminSection = ref('appointments')
+const shopSettings = ref<ShopSettings | null>(null)
+const settingsForm = ref({ name: '', timezone: '', capacity: '2', booking_window_days: '2', min_cancellation_notice_minutes: '60', no_show_grace_minutes: '30', slot_granularity_minutes: '30' })
+const profileForm = ref({ full_name: auth.user?.full_name ?? '', email: auth.user?.email ?? '', phone: auth.user?.phone ?? '', password: '' })
+const savingSettings = ref(false)
+const savingProfile = ref(false)
 const filterDate = ref(formatDate(new Date()))
 const filterStatus = ref('')
 const manualDate = ref(formatDate(new Date()))
@@ -120,13 +137,24 @@ function editService(service: Service) {
 async function loadAdminData() {
   loading.value = true
   try {
-    const [serviceData, hourData, customerData] = await Promise.all([
+    const [serviceData, hourData, customerData, settingsData] = await Promise.all([
       apiRequest<Service[]>('/admin/services', {}, token()),
       apiRequest<BusinessHour[]>('/admin/business-hours', {}, token()),
       apiRequest<Customer[]>('/admin/customers?limit=100', {}, token()),
+      apiRequest<ShopSettings>('/admin/settings', {}, token()),
     ])
     services.value = serviceData
     customers.value = customerData
+    shopSettings.value = settingsData
+    settingsForm.value = {
+      name: settingsData.name,
+      timezone: settingsData.timezone,
+      capacity: String(settingsData.capacity),
+      booking_window_days: String(settingsData.booking_window_days),
+      min_cancellation_notice_minutes: String(settingsData.min_cancellation_notice_minutes),
+      no_show_grace_minutes: String(settingsData.no_show_grace_minutes),
+      slot_granularity_minutes: String(settingsData.slot_granularity_minutes),
+    }
     hourData.forEach((hour) => {
       const day = days.value.find((item) => item.weekday === hour.weekday)
       if (day) {
@@ -298,6 +326,50 @@ async function saveBusinessHours() {
   }
 }
 
+async function saveShopSettings() {
+  savingSettings.value = true
+  try {
+    const saved = await apiRequest<ShopSettings>('/admin/settings', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: settingsForm.value.name.trim(),
+        timezone: settingsForm.value.timezone.trim(),
+        capacity: Number(settingsForm.value.capacity),
+        booking_window_days: Number(settingsForm.value.booking_window_days),
+        min_cancellation_notice_minutes: Number(settingsForm.value.min_cancellation_notice_minutes),
+        no_show_grace_minutes: Number(settingsForm.value.no_show_grace_minutes),
+        slot_granularity_minutes: Number(settingsForm.value.slot_granularity_minutes),
+      }),
+    }, token())
+    shopSettings.value = saved
+    successMessage.value = 'Dados da barbearia atualizados.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível salvar as configurações.'
+  } finally {
+    savingSettings.value = false
+  }
+}
+
+async function saveProfile() {
+  savingProfile.value = true
+  try {
+    const payload: Record<string, string> = {
+      full_name: profileForm.value.full_name.trim(),
+      email: profileForm.value.email.trim(),
+      phone: profileForm.value.phone.trim(),
+    }
+    if (profileForm.value.password) payload.password = profileForm.value.password
+    const updated = await apiRequest<User>('/auth/me', { method: 'PATCH', body: JSON.stringify(payload) }, token())
+    auth.user = updated
+    profileForm.value.password = ''
+    successMessage.value = 'Perfil atualizado.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível atualizar o perfil.'
+  } finally {
+    savingProfile.value = false
+  }
+}
+
 async function logout() {
   await auth.logout()
   await router.push('/login')
@@ -324,9 +396,10 @@ onMounted(async () => {
       <nav class="admin-navigation" aria-label="Navegação administrativa">
         <button
           v-for="item in [
-            { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
             { key: 'appointments', label: 'Agendamentos', icon: 'mdi-calendar-month-outline' },
+            { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
             { key: 'services', label: 'Serviços', icon: 'mdi-content-cut' },
+            { key: 'hours', label: 'Horários', icon: 'mdi-clock-outline' },
             { key: 'settings', label: 'Configurações', icon: 'mdi-cog-outline' },
           ]"
           :key="item.key"
@@ -416,7 +489,7 @@ onMounted(async () => {
           </section>
         </v-col>
 
-        <v-col v-if="adminSection === 'services' || adminSection === 'settings'" cols="12" lg="7">
+        <v-col v-if="adminSection === 'services' || adminSection === 'hours'" cols="12" lg="7">
           <section v-if="adminSection === 'services'" class="admin-section">
             <div class="section-heading">
               <div>
@@ -439,7 +512,7 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section v-if="adminSection === 'settings'" class="admin-section">
+          <section v-if="adminSection === 'hours'" class="admin-section">
             <div class="section-heading">
               <div>
                 <p class="section-kicker">Agenda</p>
@@ -480,6 +553,39 @@ onMounted(async () => {
             </v-btn>
           </section>
         </v-col>
+
+        <v-col v-if="adminSection === 'settings'" cols="12">
+          <v-row>
+            <v-col cols="12" md="6">
+              <section class="settings-panel">
+                <p class="section-kicker">Perfil do administrador</p>
+                <h2>Seus dados</h2>
+                <v-text-field v-model="profileForm.full_name" label="Nome completo" variant="outlined" />
+                <v-text-field v-model="profileForm.email" label="E-mail" type="email" variant="outlined" />
+                <v-text-field v-model="profileForm.phone" label="Telefone" variant="outlined" />
+                <v-text-field v-model="profileForm.password" label="Nova senha (opcional)" type="password" hint="Deixe em branco para manter a senha atual." persistent-hint variant="outlined" />
+                <v-btn class="save-button" :loading="savingProfile" @click="saveProfile">Salvar meu perfil</v-btn>
+              </section>
+            </v-col>
+            <v-col cols="12" md="6">
+              <section class="settings-panel settings-panel--dark">
+                <p class="section-kicker">Dados da barbearia</p>
+                <h2>Informações gerais</h2>
+                <v-text-field v-model="settingsForm.name" label="Nome da barbearia" variant="outlined" />
+                <v-text-field v-model="settingsForm.timezone" label="Fuso horário" variant="outlined" />
+                <v-row>
+                  <v-col cols="6"><v-text-field v-model="settingsForm.capacity" label="Atendimentos simultâneos" type="number" variant="outlined" /></v-col>
+                  <v-col cols="6"><v-text-field v-model="settingsForm.booking_window_days" label="Dias para agendar" type="number" variant="outlined" /></v-col>
+                </v-row>
+                <v-row>
+                  <v-col cols="6"><v-text-field v-model="settingsForm.min_cancellation_notice_minutes" label="Aviso para cancelar (min)" type="number" variant="outlined" /></v-col>
+                  <v-col cols="6"><v-text-field v-model="settingsForm.slot_granularity_minutes" label="Intervalo (min)" type="number" variant="outlined" /></v-col>
+                </v-row>
+                <v-btn class="save-button" :loading="savingSettings" @click="saveShopSettings">Salvar dados da barbearia</v-btn>
+              </section>
+            </v-col>
+          </v-row>
+        </v-col>
       </v-row>
     </v-container>
   </main>
@@ -493,7 +599,7 @@ onMounted(async () => {
 .admin-intro h1, .section-heading h2, .form-panel h2 { margin: 0; color: var(--ink); font-family: 'Instrument Serif', serif; font-weight: 400; }
 .admin-intro h1 { font-size: clamp(2.3rem, 5vw, 3.5rem); line-height: 1; }
 .admin-intro p:not(.section-kicker) { margin: 12px 0 0; color: var(--slate); }
-.admin-navigation { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
+.admin-navigation { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
 .admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 0.84rem; font-weight: 600; transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease; }
 .admin-nav-item:hover, .admin-nav-item--active { border-color: rgba(93, 138, 196, 0.48); background: rgba(93, 138, 196, 0.12); color: var(--navy); }
 .admin-nav-item--active { box-shadow: inset 0 -2px 0 var(--steel-blue); }
@@ -504,6 +610,12 @@ onMounted(async () => {
 .form-panel h2 { margin-bottom: 24px; color: var(--paper); }
 .form-panel :deep(.v-label), .form-panel :deep(input), .form-panel :deep(textarea) { color: var(--paper); }
 .form-panel :deep(.v-field__outline) { color: rgba(244, 246, 249, 0.4); }
+.settings-panel { height: 100%; border: 1px solid var(--hairline); padding: 24px; background: rgba(255, 255, 255, 0.3); }
+.settings-panel h2 { margin: 0 0 24px; color: var(--ink); font-family: 'Instrument Serif', serif; font-size: 2rem; font-weight: 400; }
+.settings-panel--dark { background: var(--navy-deep); }
+.settings-panel--dark h2 { color: var(--paper); }
+.settings-panel--dark :deep(.v-label), .settings-panel--dark :deep(input) { color: var(--paper); }
+.settings-panel--dark :deep(.v-field__outline) { color: rgba(244, 246, 249, 0.4); }
 .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .metric-card { min-height: 132px; padding: 20px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.3); }
 .metric-card--accent { border-color: rgba(93, 138, 196, 0.55); background: rgba(93, 138, 196, 0.08); }
