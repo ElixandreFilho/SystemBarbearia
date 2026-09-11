@@ -18,7 +18,7 @@ async function submit() {
   errorMessage.value = ''
   try {
     await auth.login({ identifier: identifier.value, password: password.value })
-    await router.push('/dashboard')
+    await router.push(auth.user?.role === 'ADMIN' ? '/admin' : '/dashboard')
   } catch (error) {
     errorMessage.value = error instanceof ApiError ? error.message : 'Não foi possível entrar'
   } finally {
