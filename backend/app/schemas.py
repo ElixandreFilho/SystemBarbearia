@@ -61,3 +61,31 @@ class HealthResponse(BaseModel):
     status: str
     environment: str
     database: str = "not_checked"
+
+
+class ServiceBase(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    price_cents: int = Field(ge=0)
+    duration_minutes: int = Field(gt=0, le=1440)
+
+
+class ServiceCreate(ServiceBase):
+    pass
+
+
+class ServiceUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    price_cents: int | None = Field(default=None, ge=0)
+    duration_minutes: int | None = Field(default=None, gt=0, le=1440)
+    is_active: bool | None = None
+
+
+class ServiceResponse(ServiceBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
