@@ -226,6 +226,7 @@ class AppointmentResponse(BaseModel):
 class AdminAppointmentResponse(AppointmentResponse):
     customer_name: str
     service_names: list[str]
+    possible_no_show: bool = False
 
 
 class PopularServiceResponse(BaseModel):

@@ -41,6 +41,7 @@ interface AdminAppointment {
   total_price_cents: number
   total_duration_minutes: number
   notes: string | null
+  possible_no_show: boolean
 }
 
 interface DashboardStats {
@@ -264,6 +265,17 @@ async function cancelAdminAppointment(appointment: AdminAppointment) {
   }
 }
 
+async function markNoShow(appointment: AdminAppointment) {
+  if (!window.confirm(`Confirmar que ${appointment.customer_name} não compareceu?`)) return
+  try {
+    await apiRequest<AdminAppointment>(`/admin/appointments/${appointment.id}/no-show`, { method: 'PATCH' }, token())
+    successMessage.value = 'Agendamento marcado como não compareceu.'
+    await Promise.all([loadAppointments(), loadStats()])
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível atualizar o agendamento.'
+  }
+}
+
 async function saveService() {
   const price = Number(form.value.price.replace(',', '.'))
   const duration = Number(form.value.duration)
@@ -465,6 +477,9 @@ onMounted(async () => {
               </div>
               <div class="appointment-row-actions">
                 <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
+                <v-btn v-if="appointment.possible_no_show" class="no-show-button" variant="outlined" size="small" @click="markNoShow(appointment)">
+                  Confirmar no-show
+                </v-btn>
                 <v-btn v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)" class="cancel-appointment-button" variant="outlined" size="small" @click="cancelAdminAppointment(appointment)">
                   Cancelar
                 </v-btn>
@@ -630,6 +645,7 @@ onMounted(async () => {
 .appointment-row-actions { display: flex; align-items: center; gap: 8px; }
 .appointment-row-actions :deep(.v-chip) { border-radius: 4px; }
 .cancel-appointment-button { border-color: rgba(139, 150, 168, 0.5) !important; border-radius: 4px !important; color: var(--slate) !important; text-transform: none; }
+.no-show-button { border-color: rgba(93, 138, 196, 0.65) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
 .manual-panel { height: 100%; }
 .manual-panel .section-kicker { color: var(--steel-blue); }
 .manual-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: -4px 0 20px; }

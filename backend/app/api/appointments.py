@@ -37,7 +37,7 @@ def appointment_email_html(customer_name: str, appointment: Appointment, message
     </div>"""
 
 
-async def admin_appointment_response(db: DbSession, appointment: Appointment) -> dict:
+async def admin_appointment_response(db: DbSession, appointment: Appointment, possible_no_show: bool = False) -> dict:
     customer = await db.get(User, appointment.customer_id)
     service_names = list(await db.scalars(
         select(Service.name)
@@ -57,6 +57,7 @@ async def admin_appointment_response(db: DbSession, appointment: Appointment) ->
         "notes": appointment.notes,
         "customer_name": customer.full_name if customer else "Cliente removido",
         "service_names": service_names,
+        "possible_no_show": possible_no_show,
     }
 
 
@@ -192,7 +193,14 @@ async def list_admin_appointments(
     if appointment_status:
         query = query.where(Appointment.status == appointment_status)
     appointments = list(await db.scalars(query))
-    return [await admin_appointment_response(db, appointment) for appointment in appointments]
+    settings = await db.get(BarbershopSettings, 1) or BarbershopSettings(id=1)
+    now = datetime.now(ZoneInfo(settings.timezone))
+    responses = []
+    for appointment in appointments:
+        appointment_end = datetime.combine(appointment.date, appointment.end_time, tzinfo=ZoneInfo(settings.timezone))
+        possible_no_show = appointment.status == AppointmentStatus.CONFIRMED and appointment_end + timedelta(minutes=settings.no_show_grace_minutes) <= now
+        responses.append(await admin_appointment_response(db, appointment, possible_no_show))
+    return responses
 
 
 @admin_router.post("", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
