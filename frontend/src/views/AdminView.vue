@@ -266,10 +266,10 @@ async function cancelAdminAppointment(appointment: AdminAppointment) {
 }
 
 async function markNoShow(appointment: AdminAppointment) {
-  if (!window.confirm(`Confirmar que ${appointment.customer_name} não compareceu?`)) return
+  if (!window.confirm(`Confirmar que ${appointment.customer_name} não compareceu ao atendimento?`)) return
   try {
     await apiRequest<AdminAppointment>(`/admin/appointments/${appointment.id}/no-show`, { method: 'PATCH' }, token())
-    successMessage.value = 'Agendamento marcado como não compareceu.'
+    successMessage.value = 'Agendamento marcado como “Não compareceu”.'
     await Promise.all([loadAppointments(), loadStats()])
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Não foi possível atualizar o agendamento.'
@@ -478,7 +478,7 @@ onMounted(async () => {
               <div class="appointment-row-actions">
                 <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
                 <v-btn v-if="appointment.possible_no_show" class="no-show-button" variant="outlined" size="small" @click="markNoShow(appointment)">
-                  Confirmar no-show
+                  Marcar como não compareceu
                 </v-btn>
                 <v-btn v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)" class="cancel-appointment-button" variant="outlined" size="small" @click="cancelAdminAppointment(appointment)">
                   Cancelar
