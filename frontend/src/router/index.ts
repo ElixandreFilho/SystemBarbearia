@@ -5,6 +5,8 @@ import DashboardView from '../views/DashboardView.vue'
 import AdminView from '../views/AdminView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,6 +14,8 @@ const router = createRouter({
     { path: '/', redirect: '/dashboard' },
     { path: '/login', component: LoginView, meta: { guestOnly: true } },
     { path: '/cadastro', component: RegisterView, meta: { guestOnly: true } },
+    { path: '/recuperar-senha', component: ForgotPasswordView, meta: { guestOnly: true } },
+    { path: '/reset-password', component: ResetPasswordView, meta: { guestOnly: true } },
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminView, meta: { requiresAuth: true, adminOnly: true } },
   ],

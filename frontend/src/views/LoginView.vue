@@ -73,7 +73,7 @@ async function submit() {
         </v-form>
 
         <div class="login-links">
-          <v-btn variant="text" class="forgot-link" href="#" @click.prevent>
+          <v-btn variant="text" class="forgot-link" to="/recuperar-senha">
             Esqueceu sua senha?
           </v-btn>
           <v-btn variant="text" class="register-link" to="/cadastro">
