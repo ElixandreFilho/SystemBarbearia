@@ -22,6 +22,23 @@ interface BusinessHour {
   end_time: string
 }
 
+interface SpecialDate {
+  id: string
+  date: string
+  is_closed: boolean
+  custom_open_time: string | null
+  custom_close_time: string | null
+  label: string | null
+}
+
+interface BlockedSlot {
+  id: string
+  date: string
+  start_time: string
+  end_time: string
+  reason: string | null
+}
+
 interface Customer {
   id: string
   full_name: string
@@ -80,6 +97,8 @@ const auth = useAuthStore()
 const services = ref<Service[]>([])
 const customers = ref<Customer[]>([])
 const appointments = ref<AdminAppointment[]>([])
+const specialDates = ref<SpecialDate[]>([])
+const blockedSlots = ref<BlockedSlot[]>([])
 const stats = ref<DashboardStats | null>(null)
 const days = ref<DayForm[]>([
   { weekday: 0, label: 'Segunda-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
@@ -102,6 +121,9 @@ const settingsForm = ref({ name: '', timezone: '', capacity: '2', booking_window
 const profileForm = ref({ full_name: auth.user?.full_name ?? '', email: auth.user?.email ?? '', phone: auth.user?.phone ?? '', password: '' })
 const savingSettings = ref(false)
 const savingProfile = ref(false)
+const savingException = ref(false)
+const specialDateForm = ref({ date: formatDate(new Date()), label: '', is_closed: true, custom_open_time: '', custom_close_time: '' })
+const blockedSlotForm = ref({ date: formatDate(new Date()), start_time: '12:00', end_time: '14:00', reason: '' })
 const filterDate = ref(formatDate(new Date()))
 const filterStatus = ref('')
 const manualDate = ref(formatDate(new Date()))
@@ -138,14 +160,18 @@ function editService(service: Service) {
 async function loadAdminData() {
   loading.value = true
   try {
-    const [serviceData, hourData, customerData, settingsData] = await Promise.all([
+    const [serviceData, hourData, customerData, settingsData, specialData, blockedData] = await Promise.all([
       apiRequest<Service[]>('/admin/services', {}, token()),
       apiRequest<BusinessHour[]>('/admin/business-hours', {}, token()),
       apiRequest<Customer[]>('/admin/customers?limit=100', {}, token()),
       apiRequest<ShopSettings>('/admin/settings', {}, token()),
+      apiRequest<SpecialDate[]>('/admin/special-dates', {}, token()),
+      apiRequest<BlockedSlot[]>('/admin/blocked-slots', {}, token()),
     ])
     services.value = serviceData
     customers.value = customerData
+    specialDates.value = specialData
+    blockedSlots.value = blockedData
     shopSettings.value = settingsData
     settingsForm.value = {
       name: settingsData.name,
@@ -338,6 +364,64 @@ async function saveBusinessHours() {
   }
 }
 
+async function createSpecialDate() {
+  savingException.value = true
+  try {
+    const saved = await apiRequest<SpecialDate>('/admin/special-dates', {
+      method: 'POST',
+      body: JSON.stringify({ date: specialDateForm.value.date, label: specialDateForm.value.label.trim() || undefined, is_closed: specialDateForm.value.is_closed, custom_open_time: specialDateForm.value.is_closed ? undefined : `${specialDateForm.value.custom_open_time}:00`, custom_close_time: specialDateForm.value.is_closed ? undefined : `${specialDateForm.value.custom_close_time}:00` }),
+    }, token())
+    specialDates.value = [...specialDates.value, saved].sort((a, b) => a.date.localeCompare(b.date))
+    successMessage.value = 'Data especial cadastrada.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível cadastrar a data especial.'
+  } finally {
+    savingException.value = false
+  }
+}
+
+async function removeSpecialDate(item: SpecialDate) {
+  if (!window.confirm(`Remover a exceção de ${formatDateLabel(item.date)}?`)) return
+  try {
+    await apiRequest<void>(`/admin/special-dates/${item.id}`, { method: 'DELETE' }, token())
+    specialDates.value = specialDates.value.filter((entry) => entry.id !== item.id)
+    successMessage.value = 'Data especial removida.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível remover a data especial.'
+  }
+}
+
+async function createBlockedSlot() {
+  savingException.value = true
+  try {
+    const saved = await apiRequest<BlockedSlot>('/admin/blocked-slots', {
+      method: 'POST',
+      body: JSON.stringify({ date: blockedSlotForm.value.date, start_time: `${blockedSlotForm.value.start_time}:00`, end_time: `${blockedSlotForm.value.end_time}:00`, reason: blockedSlotForm.value.reason.trim() || undefined }),
+    }, token())
+    blockedSlots.value = [...blockedSlots.value, saved].sort((a, b) => `${a.date}${a.start_time}`.localeCompare(`${b.date}${b.start_time}`))
+    successMessage.value = 'Bloqueio de horário cadastrado.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível cadastrar o bloqueio.'
+  } finally {
+    savingException.value = false
+  }
+}
+
+async function removeBlockedSlot(item: BlockedSlot) {
+  if (!window.confirm(`Remover o bloqueio de ${formatDateLabel(item.date)}?`)) return
+  try {
+    await apiRequest<void>(`/admin/blocked-slots/${item.id}`, { method: 'DELETE' }, token())
+    blockedSlots.value = blockedSlots.value.filter((entry) => entry.id !== item.id)
+    successMessage.value = 'Bloqueio removido.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível remover o bloqueio.'
+  }
+}
+
+function formatDateLabel(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(`${value}T12:00:00`))
+}
+
 async function saveShopSettings() {
   savingSettings.value = true
   try {
@@ -412,6 +496,7 @@ onMounted(async () => {
             { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
             { key: 'services', label: 'Serviços', icon: 'mdi-content-cut' },
             { key: 'hours', label: 'Horários', icon: 'mdi-clock-outline' },
+            { key: 'exceptions', label: 'Exceções', icon: 'mdi-calendar-alert-outline' },
             { key: 'settings', label: 'Configurações', icon: 'mdi-cog-outline' },
           ]"
           :key="item.key"
@@ -601,6 +686,48 @@ onMounted(async () => {
             </v-col>
           </v-row>
         </v-col>
+
+        <v-col v-if="adminSection === 'exceptions'" cols="12">
+          <v-row>
+            <v-col cols="12" md="6">
+              <section class="settings-panel">
+                <p class="section-kicker">Exceções de calendário</p>
+                <h2>Feriados e dias especiais</h2>
+                <v-text-field v-model="specialDateForm.date" label="Data" type="date" variant="outlined" />
+                <v-text-field v-model="specialDateForm.label" label="Descrição" placeholder="Feriado, evento ou horário especial" variant="outlined" />
+                <v-checkbox v-model="specialDateForm.is_closed" label="Barbearia fechada nesta data" color="steel-blue" hide-details />
+                <v-row v-if="!specialDateForm.is_closed">
+                  <v-col cols="6"><v-text-field v-model="specialDateForm.custom_open_time" label="Abertura" type="time" variant="outlined" /></v-col>
+                  <v-col cols="6"><v-text-field v-model="specialDateForm.custom_close_time" label="Fechamento" type="time" variant="outlined" /></v-col>
+                </v-row>
+                <v-btn class="save-button" :loading="savingException" @click="createSpecialDate">Adicionar exceção</v-btn>
+                <div v-if="!specialDates.length" class="empty-state">Nenhuma data especial cadastrada.</div>
+                <div v-for="item in specialDates" :key="item.id" class="exception-row">
+                  <div><strong>{{ formatDateLabel(item.date) }}</strong><span>{{ item.label || (item.is_closed ? 'Fechado' : `${item.custom_open_time?.slice(0, 5)} às ${item.custom_close_time?.slice(0, 5)}`) }}</span></div>
+                  <v-btn variant="text" size="small" @click="removeSpecialDate(item)">Remover</v-btn>
+                </div>
+              </section>
+            </v-col>
+            <v-col cols="12" md="6">
+              <section class="settings-panel settings-panel--dark">
+                <p class="section-kicker">Indisponibilidade pontual</p>
+                <h2>Bloquear horário</h2>
+                <v-text-field v-model="blockedSlotForm.date" label="Data" type="date" variant="outlined" />
+                <v-row>
+                  <v-col cols="6"><v-text-field v-model="blockedSlotForm.start_time" label="Início" type="time" variant="outlined" /></v-col>
+                  <v-col cols="6"><v-text-field v-model="blockedSlotForm.end_time" label="Fim" type="time" variant="outlined" /></v-col>
+                </v-row>
+                <v-text-field v-model="blockedSlotForm.reason" label="Motivo (opcional)" variant="outlined" />
+                <v-btn class="save-button" :loading="savingException" @click="createBlockedSlot">Bloquear horário</v-btn>
+                <div v-if="!blockedSlots.length" class="empty-state">Nenhum horário bloqueado.</div>
+                <div v-for="item in blockedSlots" :key="item.id" class="exception-row">
+                  <div><strong>{{ formatDateLabel(item.date) }} · {{ formatTime(item.start_time) }}–{{ formatTime(item.end_time) }}</strong><span>{{ item.reason || 'Indisponibilidade manual' }}</span></div>
+                  <v-btn variant="text" size="small" @click="removeBlockedSlot(item)">Remover</v-btn>
+                </div>
+              </section>
+            </v-col>
+          </v-row>
+        </v-col>
       </v-row>
     </v-container>
   </main>
@@ -614,7 +741,7 @@ onMounted(async () => {
 .admin-intro h1, .section-heading h2, .form-panel h2 { margin: 0; color: var(--ink); font-family: 'Instrument Serif', serif; font-weight: 400; }
 .admin-intro h1 { font-size: clamp(2.3rem, 5vw, 3.5rem); line-height: 1; }
 .admin-intro p:not(.section-kicker) { margin: 12px 0 0; color: var(--slate); }
-.admin-navigation { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
+.admin-navigation { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
 .admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 0.84rem; font-weight: 600; transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease; }
 .admin-nav-item:hover, .admin-nav-item--active { border-color: rgba(93, 138, 196, 0.48); background: rgba(93, 138, 196, 0.12); color: var(--navy); }
 .admin-nav-item--active { box-shadow: inset 0 -2px 0 var(--steel-blue); }
@@ -670,6 +797,12 @@ onMounted(async () => {
 .save-button { min-height: 46px; margin-top: 20px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
 .logout-button { color: var(--steel-blue); text-transform: none; }
 .empty-state { padding: 32px 0; color: var(--slate); }
+.exception-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--hairline); }
+.exception-row:last-child { border-bottom: 0; }
+.exception-row strong, .exception-row span { display: block; }
+.exception-row span { margin-top: 4px; color: var(--slate); font-size: 0.8rem; }
+.settings-panel--dark .exception-row { border-color: var(--hairline-dark); }
+.settings-panel--dark .exception-row strong { color: var(--paper); }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); } .admin-nav-item { min-height: 46px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
