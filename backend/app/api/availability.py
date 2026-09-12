@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1", tags=["availability"])
 
 @router.get("/availability", response_model=AvailabilityResponse)
 async def get_availability(
-    _: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_user)],
     db: DbSession,
     target_date: date = Query(alias="date"),
     service_ids: list[UUID] = Query(min_length=1),
@@ -61,10 +61,19 @@ async def get_availability(
     active_statuses = (AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
     appointments = list(await db.scalars(select(Appointment).where(Appointment.date == target_date, Appointment.status.in_(active_statuses))))
     existing = [TimeInterval(item.start_time, item.end_time) for item in appointments]
+    customer_existing = [
+        TimeInterval(item.start_time, item.end_time)
+        for item in appointments
+        if item.customer_id == user.id
+    ]
     valid_slots = []
     for slot in slots:
         end_dt = datetime.combine(target_date, slot) + timedelta(minutes=duration)
         candidate = TimeInterval(slot, end_dt.time())
-        if max_concurrent_overlaps(candidate, existing) < capacity and slot not in valid_slots:
+        if (
+            max_concurrent_overlaps(candidate, existing) < capacity
+            and max_concurrent_overlaps(candidate, customer_existing) == 0
+            and slot not in valid_slots
+        ):
             valid_slots.append(slot)
     return AvailabilityResponse(date=target_date, duration_minutes=duration, slots=valid_slots)

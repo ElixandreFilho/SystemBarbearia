@@ -37,6 +37,25 @@ def appointment_email_html(customer_name: str, appointment: Appointment, message
     </div>"""
 
 
+async def has_customer_overlap(
+    db: DbSession,
+    customer_id: UUID,
+    target_date: date,
+    start_time,
+    end_time,
+) -> bool:
+    appointment_id = await db.scalar(
+        select(Appointment.id).where(
+            Appointment.customer_id == customer_id,
+            Appointment.date == target_date,
+            Appointment.status.in_((AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)),
+            Appointment.start_time < end_time,
+            Appointment.end_time > start_time,
+        ).limit(1)
+    )
+    return appointment_id is not None
+
+
 async def admin_appointment_response(db: DbSession, appointment: Appointment, possible_no_show: bool = False) -> dict:
     customer = await db.get(User, appointment.customer_id)
     service_names = list(await db.scalars(
@@ -94,6 +113,8 @@ async def create_appointment(
     duration = sum(service.duration_minutes for service in services)
     total_price = sum(service.price_cents for service in services)
     end_time = (datetime.combine(payload.date, payload.start_time) + timedelta(minutes=duration)).time()
+    if await has_customer_overlap(db, user.id, payload.date, payload.start_time, end_time):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="você já possui um agendamento nesse intervalo")
     appointment = Appointment(
         customer_id=user.id,
         date=payload.date,
@@ -221,11 +242,14 @@ async def create_admin_appointment(
     if len(services) != len(set(payload.service_ids)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="um ou mais serviços não estão disponíveis")
     duration = sum(service.duration_minutes for service in services)
+    end_time = (datetime.combine(payload.date, payload.start_time) + timedelta(minutes=duration)).time()
+    if await has_customer_overlap(db, customer.id, payload.date, payload.start_time, end_time):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="este cliente já possui um agendamento nesse intervalo")
     appointment = Appointment(
         customer_id=customer.id,
         date=payload.date,
         start_time=payload.start_time,
-        end_time=(datetime.combine(payload.date, payload.start_time) + timedelta(minutes=duration)).time(),
+        end_time=end_time,
         status=AppointmentStatus.CONFIRMED,
         total_price_cents=sum(service.price_cents for service in services),
         total_duration_minutes=duration,
