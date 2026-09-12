@@ -205,6 +205,11 @@ class AppointmentCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class AppointmentUpdate(BaseModel):
+    service_ids: list[UUID] = Field(min_length=1)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
 class AdminAppointmentCreate(AppointmentCreate):
     customer_id: UUID
 
@@ -221,6 +226,7 @@ class AppointmentResponse(BaseModel):
     total_price_cents: int
     total_duration_minutes: int
     notes: str | None
+    service_ids: list[UUID] = Field(default_factory=list)
 
 
 class AdminAppointmentResponse(AppointmentResponse):

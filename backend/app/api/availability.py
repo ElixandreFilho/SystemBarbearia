@@ -21,6 +21,7 @@ async def get_availability(
     db: DbSession,
     target_date: date = Query(alias="date"),
     service_ids: list[UUID] = Query(min_length=1),
+    exclude_appointment_id: UUID | None = Query(default=None, include_in_schema=False),
 ) -> AvailabilityResponse:
     services = list(await db.scalars(select(Service).where(Service.id.in_(service_ids), Service.is_active.is_(True))))
     if len(services) != len(set(service_ids)):
@@ -59,7 +60,10 @@ async def get_availability(
     )
 
     active_statuses = (AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
-    appointments = list(await db.scalars(select(Appointment).where(Appointment.date == target_date, Appointment.status.in_(active_statuses))))
+    appointment_query = select(Appointment).where(Appointment.date == target_date, Appointment.status.in_(active_statuses))
+    if exclude_appointment_id:
+        appointment_query = appointment_query.where(Appointment.id != exclude_appointment_id)
+    appointments = list(await db.scalars(appointment_query))
     existing = [TimeInterval(item.start_time, item.end_time) for item in appointments]
     customer_existing = [
         TimeInterval(item.start_time, item.end_time)

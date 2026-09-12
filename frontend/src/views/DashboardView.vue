@@ -23,6 +23,7 @@ interface Appointment {
   total_price_cents: number
   total_duration_minutes: number
   notes: string | null
+  service_ids: string[]
 }
 
 interface AvailabilityResponse {
@@ -45,6 +46,10 @@ const loadingSlots = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const editingAppointment = ref<Appointment | null>(null)
+const editServiceIds = ref<string[]>([])
+const editNotes = ref('')
+const savingEdit = ref(false)
 
 const minDate = formatDate(new Date())
 const maxDate = formatDate(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000))
@@ -53,6 +58,9 @@ const token = () => auth.accessToken ?? undefined
 const selectedServices = computed(() => services.value.filter((service) => selectedServiceIds.value.includes(service.id)))
 const totalPrice = computed(() => selectedServices.value.reduce((total, service) => total + service.price_cents, 0))
 const totalDuration = computed(() => selectedServices.value.reduce((total, service) => total + service.duration_minutes, 0))
+const editServices = computed(() => services.value.filter((service) => editServiceIds.value.includes(service.id)))
+const editTotalPrice = computed(() => editServices.value.reduce((total, service) => total + service.price_cents, 0))
+const editTotalDuration = computed(() => editServices.value.reduce((total, service) => total + service.duration_minutes, 0))
 
 function formatDate(date: Date) {
   return date.toISOString().slice(0, 10)
@@ -158,6 +166,31 @@ async function cancelAppointment(appointment: Appointment) {
   }
 }
 
+function openEdit(appointment: Appointment) {
+  editingAppointment.value = appointment
+  editServiceIds.value = [...appointment.service_ids]
+  editNotes.value = appointment.notes ?? ''
+}
+
+async function updateAppointment() {
+  if (!editingAppointment.value || !editServiceIds.value.length) return
+  savingEdit.value = true
+  errorMessage.value = ''
+  try {
+    const updated = await apiRequest<Appointment>(`/appointments/${editingAppointment.value.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ service_ids: editServiceIds.value, notes: editNotes.value.trim() || undefined }),
+    }, token())
+    appointments.value = appointments.value.map((item) => item.id === updated.id ? updated : item)
+    successMessage.value = 'Agendamento atualizado com sucesso.'
+    editingAppointment.value = null
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível atualizar o agendamento.'
+  } finally {
+    savingEdit.value = false
+  }
+}
+
 async function logout() {
   await auth.logout()
   await router.push('/login')
@@ -249,6 +282,15 @@ onMounted(loadDashboard)
                 </v-chip>
                 <v-btn
                   v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)"
+                  class="edit-button"
+                  variant="text"
+                  size="small"
+                  @click="openEdit(appointment)"
+                >
+                  Editar
+                </v-btn>
+                <v-btn
+                  v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)"
                   class="cancel-button"
                   variant="text"
                   size="small"
@@ -322,6 +364,25 @@ onMounted(loadDashboard)
         </v-col>
       </v-row>
     </v-container>
+
+    <v-dialog v-model="editingAppointment" max-width="520">
+      <v-card class="edit-dialog">
+        <v-card-title>Atualizar agendamento</v-card-title>
+        <v-card-text>
+          <p class="edit-dialog-intro">O horário permanece {{ editingAppointment ? formatTime(editingAppointment.start_time) : '' }}. Escolha os serviços desejados.</p>
+          <v-select v-model="editServiceIds" label="Serviços" :items="services" item-title="name" item-value="id" multiple chips variant="outlined" />
+          <div class="edit-summary">
+            <span>{{ editTotalDuration }} minutos</span>
+            <strong>{{ formatMoney(editTotalPrice) }}</strong>
+          </div>
+          <v-textarea v-model="editNotes" label="Observações (opcional)" rows="3" variant="outlined" />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn variant="text" @click="editingAppointment = null">Voltar</v-btn>
+          <v-btn class="book-button" :loading="savingEdit" :disabled="!editServiceIds.length" @click="updateAppointment">Salvar alteração</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </main>
 </template>
 
@@ -360,6 +421,7 @@ onMounted(loadDashboard)
 .appointment-actions { display: flex; align-items: center; gap: 8px; }
 .appointment-actions :deep(.v-chip) { border-radius: 4px; }
 .cancel-button { color: var(--slate); text-transform: none; }
+.edit-button { color: var(--navy); text-transform: none; }
 .booking-hint, .empty-state, .empty-slots { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 120px; color: var(--slate); text-align: center; }
 .empty-state { flex-direction: column; border: 1px dashed var(--hairline); }
 .empty-state--compact { min-height: 80px; }
@@ -376,6 +438,10 @@ onMounted(loadDashboard)
 .slot-button--selected { border-color: var(--steel-blue) !important; background: var(--steel-blue) !important; }
 .book-button { min-height: 48px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
 .logout-button { color: var(--steel-blue); text-transform: none; }
+.edit-dialog { border: 1px solid var(--hairline) !important; border-radius: 8px !important; background: var(--paper) !important; }
+.edit-dialog-intro { margin: 0 0 20px; color: var(--slate); font-size: 0.88rem; }
+.edit-summary { display: flex; justify-content: space-between; margin: 4px 0 18px; color: var(--slate); }
+.edit-summary strong { color: var(--navy); }
 @media (max-width: 960px) { .booking-panel { position: static; } }
 @media (max-width: 600px) { .dashboard-content { padding: 28px 12px 56px; } .dashboard-intro { margin-bottom: 24px; } .dashboard-section, .booking-panel { padding: 18px; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-actions { width: 100%; justify-content: space-between; } }
 </style>
