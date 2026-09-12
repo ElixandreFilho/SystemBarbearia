@@ -1,5 +1,6 @@
 import hashlib
 from datetime import UTC, date, datetime, timedelta
+from html import escape
 from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -12,6 +13,7 @@ from app.api.availability import get_availability
 from app.dependencies import DbSession, get_current_user, require_role
 from app.audit import record_audit
 from app.models import Appointment, AppointmentService, AppointmentStatus, BarbershopSettings, IdempotencyRecord, Service, User, UserRole
+from app.notifications import send_email
 from app.schemas import AdminAppointmentCreate, AdminAppointmentResponse, AdminDashboardResponse, AppointmentCreate, AppointmentResponse, CancelAppointmentRequest, PopularServiceResponse
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
@@ -21,6 +23,18 @@ admin_router = APIRouter(prefix="/api/v1/admin/appointments", tags=["admin-appoi
 def advisory_lock_key(target_date) -> int:
     digest = hashlib.sha256(target_date.isoformat().encode()).digest()
     return int.from_bytes(digest[:8], byteorder="big", signed=True)
+
+
+def appointment_email_html(customer_name: str, appointment: Appointment, message: str) -> str:
+    return f"""<div style=\"font-family:Arial,sans-serif;line-height:1.6;color:#0F1B2E\">
+      <h2>Barbearia</h2>
+      <p>Olá, {escape(customer_name)}.</p>
+      <p>{escape(message)}</p>
+      <p><strong>Data:</strong> {appointment.date.strftime('%d/%m/%Y')}<br>
+      <strong>Horário:</strong> {appointment.start_time.strftime('%H:%M')}<br>
+      <strong>Duração:</strong> {appointment.total_duration_minutes} minutos</p>
+      <p>Até breve!</p>
+    </div>"""
 
 
 async def admin_appointment_response(db: DbSession, appointment: Appointment) -> dict:
@@ -102,6 +116,15 @@ async def create_appointment(
         for service in services
     )
     db.add(IdempotencyRecord(user_id=user.id, key=idempotency_key, appointment_id=appointment.id))
+    if user.email:
+        await send_email(
+            db,
+            user.email,
+            "APPOINTMENT_CONFIRMED",
+            "Agendamento confirmado | Barbearia",
+            appointment_email_html(user.full_name, appointment, "Seu horário foi confirmado com sucesso."),
+            {"appointment_id": str(appointment.id)},
+        )
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -144,6 +167,15 @@ async def cancel_my_appointment(
     appointment.status = AppointmentStatus.CANCELLED
     appointment.cancelled_at = datetime.now(UTC)
     appointment.cancelled_by = user.id
+    if user.email:
+        await send_email(
+            db,
+            user.email,
+            "APPOINTMENT_CANCELLED",
+            "Agendamento cancelado | Barbearia",
+            appointment_email_html(user.full_name, appointment, "Seu agendamento foi cancelado."),
+            {"appointment_id": str(appointment.id)},
+        )
     await db.commit()
 
 
@@ -204,6 +236,15 @@ async def create_admin_appointment(
         for service in services
     )
     record_audit(db, request, admin.id, "APPOINTMENT_CREATED_FOR_CUSTOMER", "Appointment", str(appointment.id), {"customer_id": str(customer.id)})
+    if customer.email:
+        await send_email(
+            db,
+            customer.email,
+            "APPOINTMENT_CONFIRMED",
+            "Agendamento confirmado | Barbearia",
+            appointment_email_html(customer.full_name, appointment, "Seu horário foi confirmado pela barbearia."),
+            {"appointment_id": str(appointment.id)},
+        )
     await db.commit()
     await db.refresh(appointment)
     return appointment
@@ -260,6 +301,16 @@ async def admin_cancel_appointment(
     appointment.cancelled_by = admin.id
     appointment.cancellation_reason = payload.reason
     record_audit(db, request, admin.id, "APPOINTMENT_CANCELLED", "Appointment", str(appointment.id), {"reason": payload.reason})
+    customer = await db.get(User, appointment.customer_id)
+    if customer and customer.email:
+        await send_email(
+            db,
+            customer.email,
+            "APPOINTMENT_CANCELLED",
+            "Agendamento cancelado | Barbearia",
+            appointment_email_html(customer.full_name, appointment, "Seu agendamento foi cancelado pela barbearia."),
+            {"appointment_id": str(appointment.id), "reason": payload.reason},
+        )
     await db.commit()
     await db.refresh(appointment)
     return appointment
