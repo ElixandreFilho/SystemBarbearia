@@ -377,7 +377,7 @@ async def admin_dashboard(
         .limit(5)
     )
     return {
-        "total_appointments": len(appointments),
+        "total_appointments": len(active),
         "confirmed_appointments": sum(item.status == AppointmentStatus.CONFIRMED for item in appointments),
         "completed_appointments": sum(item.status == AppointmentStatus.COMPLETED for item in appointments),
         "cancelled_appointments": sum(item.status == AppointmentStatus.CANCELLED for item in appointments),

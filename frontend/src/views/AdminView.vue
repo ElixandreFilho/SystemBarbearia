@@ -518,7 +518,7 @@ onMounted(async () => {
         <v-col v-if="adminSection === 'dashboard'" cols="12">
           <section class="metrics-grid">
             <article class="metric-card">
-              <span>Agendamentos</span>
+              <span>Agendamentos ativos</span>
               <strong>{{ stats?.total_appointments ?? 0 }}</strong>
               <small>{{ stats?.confirmed_appointments ?? 0 }} confirmados</small>
             </article>
@@ -531,6 +531,11 @@ onMounted(async () => {
               <span>Concluídos</span>
               <strong>{{ stats?.completed_appointments ?? 0 }}</strong>
               <small>Atendimentos realizados</small>
+            </article>
+            <article class="metric-card metric-card--cancelled">
+              <span>Cancelados</span>
+              <strong>{{ stats?.cancelled_appointments ?? 0 }}</strong>
+              <small>Ficam fora do faturamento</small>
             </article>
             <article class="metric-card metric-card--accent">
               <span>Mais procurado</span>
@@ -758,9 +763,10 @@ onMounted(async () => {
 .settings-panel--dark h2 { color: var(--paper); }
 .settings-panel--dark :deep(.v-label), .settings-panel--dark :deep(input) { color: var(--paper); }
 .settings-panel--dark :deep(.v-field__outline) { color: rgba(244, 246, 249, 0.4); }
-.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .metric-card { min-height: 132px; padding: 20px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.3); }
 .metric-card--accent { border-color: rgba(93, 138, 196, 0.55); background: rgba(93, 138, 196, 0.08); }
+.metric-card--cancelled { border-color: rgba(139, 150, 168, 0.55); background: rgba(139, 150, 168, 0.08); }
 .metric-card span, .metric-card small { display: block; color: var(--slate); font-size: 0.78rem; }
 .metric-card strong { display: block; overflow: hidden; margin: 10px 0 8px; color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .agenda-section { height: 100%; }
