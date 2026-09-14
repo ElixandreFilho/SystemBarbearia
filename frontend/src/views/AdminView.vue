@@ -134,6 +134,8 @@ const manualSlots = ref<string[]>([])
 const manualNotes = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+const swipeStartX = ref<number | null>(null)
+const swipeAppointmentId = ref<string | null>(null)
 const token = () => auth.accessToken ?? undefined
 
 const editing = () => Boolean(form.value.id)
@@ -311,6 +313,23 @@ async function completeAppointment(appointment: AdminAppointment) {
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Não foi possível concluir o atendimento.'
   }
+}
+
+function beginAppointmentSwipe(event: PointerEvent, appointment: AdminAppointment) {
+  if ((event.target as HTMLElement).closest('button, input, select, textarea')) return
+  swipeStartX.value = event.clientX
+  swipeAppointmentId.value = appointment.id
+  ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
+}
+
+async function finishAppointmentSwipe(event: PointerEvent, appointment: AdminAppointment) {
+  if (swipeStartX.value === null || swipeAppointmentId.value !== appointment.id) return
+  const distance = event.clientX - swipeStartX.value
+  swipeStartX.value = null
+  swipeAppointmentId.value = null
+  if (Math.abs(distance) < 90) return
+  if (distance > 0 && appointment.status === 'CONFIRMED') await completeAppointment(appointment)
+  if (distance < 0 && ['PENDING', 'CONFIRMED'].includes(appointment.status)) await cancelAdminAppointment(appointment)
 }
 
 async function saveService() {
@@ -562,6 +581,7 @@ onMounted(async () => {
               <div>
                 <p class="section-kicker">Operação</p>
                 <h2>Agendamentos</h2>
+                <small class="swipe-hint">No celular, deslize para a direita para concluir ou para a esquerda para cancelar.</small>
               </div>
               <v-btn variant="outlined" color="slate" @click="filterDate = ''; loadAppointments()">Ver todos</v-btn>
             </div>
@@ -571,7 +591,14 @@ onMounted(async () => {
             </div>
             <v-progress-linear v-if="loadingAppointments" indeterminate color="steel-blue" />
             <div v-else-if="!appointments.length" class="empty-state">Nenhum agendamento encontrado para este filtro.</div>
-            <div v-for="appointment in appointments" :key="appointment.id" class="appointment-row">
+            <div
+              v-for="appointment in appointments"
+              :key="appointment.id"
+              class="appointment-row"
+              @pointerdown="beginAppointmentSwipe($event, appointment)"
+              @pointerup="finishAppointmentSwipe($event, appointment)"
+              @pointercancel="swipeStartX = null; swipeAppointmentId = null"
+            >
               <div>
                 <strong>{{ formatTime(appointment.start_time) }} · {{ appointment.customer_name }}</strong>
                 <span>{{ appointment.service_names.join(' · ') }} · {{ formatMoney(appointment.total_price_cents) }}</span>
@@ -785,12 +812,13 @@ onMounted(async () => {
 .metric-card strong { display: block; overflow: hidden; margin: 10px 0 8px; color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .agenda-section { height: 100%; }
 .filter-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 12px; }
-.appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); }
+.appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); touch-action: pan-y; user-select: none; }
 .appointment-row:last-child { border-bottom: 0; }
 .appointment-row strong, .appointment-row span { display: block; }
 .appointment-row span { margin-top: 5px; color: var(--slate); font-size: 0.8rem; }
 .appointment-row-actions { display: flex; align-items: center; gap: 8px; }
 .appointment-row-actions :deep(.v-chip) { border-radius: 4px; }
+.swipe-hint { display: block; margin-top: 8px; color: var(--slate); font-size: 0.72rem; font-weight: 400; }
 .cancel-appointment-button { border-color: rgba(139, 150, 168, 0.5) !important; border-radius: 4px !important; color: var(--slate) !important; text-transform: none; }
 .no-show-button { border-color: rgba(93, 138, 196, 0.65) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
 .complete-button { border-color: rgba(31, 59, 99, 0.55) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
