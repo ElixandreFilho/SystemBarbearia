@@ -613,10 +613,23 @@ onMounted(async () => {
                 <span>{{ appointment.service_names.join(' · ') }} · {{ formatMoney(appointment.total_price_cents) }}</span>
               </div>
               <div class="appointment-row-actions">
-                <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
+                <span class="appointment-status" :class="`appointment-status--${appointment.status.toLowerCase()}`">
+                  <i aria-hidden="true" />
+                  {{ statusLabel(appointment.status) }}
+                </span>
                 <v-btn v-if="appointment.status === 'CONFIRMED'" class="complete-button" variant="outlined" size="small" @click="completeAppointment(appointment)">
-                  Concluir atendimento
+                  Concluir
                 </v-btn>
+                <v-menu v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)" location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn v-bind="props" icon="mdi-dots-vertical" variant="text" size="small" class="appointment-menu-button" aria-label="Mais ações" />
+                  </template>
+                  <v-list density="compact" min-width="210">
+                    <v-list-item v-if="appointment.possible_no_show" prepend-icon="mdi-account-off-outline" title="Não compareceu" @click="markNoShow(appointment)" />
+                    <v-list-item v-if="appointment.status === 'CONFIRMED'" prepend-icon="mdi-check-circle-outline" title="Concluir atendimento" @click="completeAppointment(appointment)" />
+                    <v-list-item prepend-icon="mdi-close-circle-outline" title="Cancelar agendamento" @click="cancelAdminAppointment(appointment)" />
+                  </v-list>
+                </v-menu>
                 <v-btn v-if="appointment.possible_no_show" class="no-show-button" variant="outlined" size="small" @click="markNoShow(appointment)">
                   Marcar como não compareceu
                 </v-btn>
@@ -842,7 +855,15 @@ onMounted(async () => {
 .appointment-row span { margin-top: 5px; color: var(--slate); font-size: 0.8rem; }
 .appointment-row-actions { display: flex; align-items: center; gap: 8px; }
 .appointment-row-actions :deep(.v-chip) { border-radius: 4px; }
+.appointment-status { display: inline-flex; align-items: center; gap: 6px; color: var(--slate); font-size: 0.76rem; white-space: nowrap; }
+.appointment-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--slate); }
+.appointment-status--confirmed i { background: var(--steel-blue); }
+.appointment-status--completed i { background: var(--navy); }
+.appointment-status--cancelled i, .appointment-status--no_show i { background: var(--slate); }
+.appointment-menu-button { min-width: 40px; color: var(--slate); }
+.no-show-button, .cancel-appointment-button { display: none !important; }
 .swipe-hint { display: block; margin-top: 8px; color: var(--slate); font-size: 0.72rem; font-weight: 400; }
+@media (min-width: 601px) { .swipe-hint { display: none; } }
 .cancel-appointment-button { border-color: rgba(139, 150, 168, 0.5) !important; border-radius: 4px !important; color: var(--slate) !important; text-transform: none; }
 .no-show-button { border-color: rgba(93, 138, 196, 0.65) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
 .complete-button { border-color: rgba(31, 59, 99, 0.55) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
