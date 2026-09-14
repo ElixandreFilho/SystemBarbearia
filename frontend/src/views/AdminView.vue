@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { apiRequest } from '../services/api'
@@ -44,6 +44,7 @@ interface Customer {
   full_name: string
   email: string | null
   phone: string | null
+  is_active: boolean
 }
 
 interface AdminAppointment {
@@ -121,6 +122,9 @@ const settingsForm = ref({ name: '', timezone: '', capacity: '2', booking_window
 const profileForm = ref({ full_name: auth.user?.full_name ?? '', email: auth.user?.email ?? '', phone: auth.user?.phone ?? '', password: '' })
 const savingSettings = ref(false)
 const savingProfile = ref(false)
+const savingCustomer = ref(false)
+const customerSearch = ref('')
+const customerForm = ref({ id: '', full_name: '', email: '', phone: '', password: '' })
 const savingException = ref(false)
 const specialDateForm = ref({ date: formatDate(new Date()), label: '', is_closed: true, custom_open_time: '', custom_close_time: '' })
 const blockedSlotForm = ref({ date: formatDate(new Date()), start_time: '12:00', end_time: '14:00', reason: '' })
@@ -143,6 +147,11 @@ const token = () => auth.accessToken ?? undefined
 
 const editing = () => Boolean(form.value.id)
 const activeServices = () => services.value.filter((service) => service.is_active)
+const filteredCustomers = computed(() => {
+  const query = customerSearch.value.trim().toLowerCase()
+  if (!query) return customers.value
+  return customers.value.filter((customer) => [customer.full_name, customer.email, customer.phone].some((value) => value?.toLowerCase().includes(query)))
+})
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
@@ -159,6 +168,48 @@ function editService(service: Service) {
     description: service.description ?? '',
     price: (service.price_cents / 100).toFixed(2).replace('.', ','),
     duration: String(service.duration_minutes),
+  }
+}
+
+function resetCustomerForm() {
+  customerForm.value = { id: '', full_name: '', email: '', phone: '', password: '' }
+}
+
+function editCustomer(customer: Customer) {
+  customerForm.value = { id: customer.id, full_name: customer.full_name, email: customer.email ?? '', phone: customer.phone ?? '', password: '' }
+}
+
+async function saveCustomer() {
+  if (!customerForm.value.full_name.trim() || (!customerForm.value.id && customerForm.value.password.length < 8)) return
+  savingCustomer.value = true
+  try {
+    const payload: Record<string, string> = { full_name: customerForm.value.full_name.trim(), email: customerForm.value.email.trim(), phone: customerForm.value.phone.trim() }
+    if (customerForm.value.password) payload.password = customerForm.value.password
+    const saved = await apiRequest<Customer>(customerForm.value.id ? `/admin/customers/${customerForm.value.id}` : '/admin/customers', {
+      method: customerForm.value.id ? 'PATCH' : 'POST',
+      body: JSON.stringify(payload),
+    }, token())
+    customers.value = customerForm.value.id
+      ? customers.value.map((customer) => customer.id === saved.id ? saved : customer)
+      : [saved, ...customers.value]
+    successMessage.value = customerForm.value.id ? 'Cliente atualizado.' : 'Cliente cadastrado.'
+    resetCustomerForm()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível salvar o cliente.'
+  } finally {
+    savingCustomer.value = false
+  }
+}
+
+async function deactivateCustomer(customer: Customer) {
+  if (!window.confirm(`Desativar o cadastro de ${customer.full_name}?`)) return
+  try {
+    await apiRequest<void>(`/admin/customers/${customer.id}`, { method: 'DELETE' }, token())
+    customer.is_active = false
+    customers.value = [...customers.value]
+    successMessage.value = 'Cliente desativado.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível desativar o cliente.'
   }
 }
 
@@ -543,6 +594,7 @@ onMounted(async () => {
             { key: 'appointments', label: 'Agendamentos', icon: 'mdi-calendar-month-outline' },
             { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
             { key: 'services', label: 'Serviços', icon: 'mdi-content-cut' },
+            { key: 'customers', label: 'Clientes', icon: 'mdi-account-group-outline' },
             { key: 'hours', label: 'Horários', icon: 'mdi-clock-outline' },
             { key: 'exceptions', label: 'Exceções', icon: 'mdi-calendar-alert-outline' },
             { key: 'settings', label: 'Configurações', icon: 'mdi-cog-outline' },
@@ -734,6 +786,36 @@ onMounted(async () => {
           </section>
         </v-col>
 
+        <v-col v-if="adminSection === 'customers'" cols="12">
+          <v-row>
+            <v-col cols="12" lg="7">
+              <section class="admin-section">
+                <div class="section-heading">
+                  <div><p class="section-kicker">Relacionamento</p><h2>Clientes</h2></div>
+                  <v-btn variant="outlined" color="slate" @click="resetCustomerForm">Novo cliente</v-btn>
+                </div>
+                <v-text-field v-model="customerSearch" label="Buscar por nome, e-mail ou telefone" prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details class="customer-search" />
+                <div v-if="!filteredCustomers.length" class="empty-state">Nenhum cliente encontrado.</div>
+                <div v-for="customer in filteredCustomers" :key="customer.id" class="customer-row" :class="{ 'customer-row--inactive': !customer.is_active }">
+                  <div><strong>{{ customer.full_name }}</strong><span>{{ customer.email || customer.phone || 'Sem contato cadastrado' }}</span></div>
+                  <div class="row-actions"><v-chip size="small" variant="outlined">{{ customer.is_active ? 'Ativo' : 'Inativo' }}</v-chip><v-btn variant="text" size="small" @click="editCustomer(customer)">Editar</v-btn><v-btn v-if="customer.is_active" variant="text" size="small" @click="deactivateCustomer(customer)">Desativar</v-btn></div>
+                </div>
+              </section>
+            </v-col>
+            <v-col cols="12" lg="5">
+              <section class="form-panel">
+                <p class="section-kicker">{{ customerForm.id ? 'Editar cliente' : 'Novo cliente' }}</p>
+                <h2>{{ customerForm.id ? 'Atualizar cadastro' : 'Cadastrar cliente' }}</h2>
+                <v-text-field v-model="customerForm.full_name" label="Nome completo" variant="outlined" />
+                <v-text-field v-model="customerForm.email" label="E-mail" type="email" variant="outlined" />
+                <v-text-field v-model="customerForm.phone" label="Telefone" variant="outlined" />
+                <v-text-field v-model="customerForm.password" :label="customerForm.id ? 'Nova senha (opcional)' : 'Senha temporária'" type="password" variant="outlined" :hint="customerForm.id ? 'Deixe em branco para manter a senha atual.' : 'Mínimo de 8 caracteres.'" persistent-hint />
+                <v-btn class="save-button" block :loading="savingCustomer" @click="saveCustomer">{{ customerForm.id ? 'Salvar alterações' : 'Cadastrar cliente' }}</v-btn>
+              </section>
+            </v-col>
+          </v-row>
+        </v-col>
+
         <v-col v-if="adminSection === 'settings'" cols="12">
           <v-row>
             <v-col cols="12" md="6">
@@ -836,7 +918,7 @@ onMounted(async () => {
 .admin-intro h1, .section-heading h2, .form-panel h2 { margin: 0; color: var(--ink); font-family: 'Instrument Serif', serif; font-weight: 400; }
 .admin-intro h1 { font-size: clamp(2.3rem, 5vw, 3.5rem); line-height: 1; }
 .admin-intro p:not(.section-kicker) { margin: 12px 0 0; color: var(--slate); }
-.admin-navigation { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
+.admin-navigation { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.42); }
 .admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 0.84rem; font-weight: 600; transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease; }
 .admin-nav-item:hover, .admin-nav-item--active { border-color: rgba(93, 138, 196, 0.48); background: rgba(93, 138, 196, 0.12); color: var(--navy); }
 .admin-nav-item--active { box-shadow: inset 0 -2px 0 var(--steel-blue); }
@@ -893,6 +975,12 @@ onMounted(async () => {
 .service-row strong, .service-row span { display: block; }
 .service-row span { margin-top: 5px; color: var(--slate); font-size: 0.82rem; }
 .service-row--inactive { opacity: 0.58; }
+.customer-search { margin: 24px 0 8px; }
+.customer-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); }
+.customer-row:last-child { border-bottom: 0; }
+.customer-row strong, .customer-row span { display: block; }
+.customer-row span { margin-top: 5px; color: var(--slate); font-size: 0.82rem; }
+.customer-row--inactive { opacity: 0.58; }
 .row-actions { display: flex; align-items: center; gap: 4px; }
 .row-actions :deep(.v-chip) { border-radius: 4px; }
 .day-row { align-items: flex-start; flex-wrap: wrap; }
