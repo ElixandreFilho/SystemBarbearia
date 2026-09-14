@@ -302,6 +302,17 @@ async function markNoShow(appointment: AdminAppointment) {
   }
 }
 
+async function completeAppointment(appointment: AdminAppointment) {
+  if (!window.confirm(`Marcar o atendimento de ${appointment.customer_name} como concluído?`)) return
+  try {
+    await apiRequest<AdminAppointment>(`/admin/appointments/${appointment.id}/complete`, { method: 'PATCH' }, token())
+    successMessage.value = 'Atendimento concluído.'
+    await Promise.all([loadAppointments(), loadStats()])
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível concluir o atendimento.'
+  }
+}
+
 async function saveService() {
   const price = Number(form.value.price.replace(',', '.'))
   const duration = Number(form.value.duration)
@@ -567,6 +578,9 @@ onMounted(async () => {
               </div>
               <div class="appointment-row-actions">
                 <v-chip size="small" :color="statusColor(appointment.status)" variant="outlined">{{ statusLabel(appointment.status) }}</v-chip>
+                <v-btn v-if="appointment.status === 'CONFIRMED'" class="complete-button" variant="outlined" size="small" @click="completeAppointment(appointment)">
+                  Concluir atendimento
+                </v-btn>
                 <v-btn v-if="appointment.possible_no_show" class="no-show-button" variant="outlined" size="small" @click="markNoShow(appointment)">
                   Marcar como não compareceu
                 </v-btn>
@@ -779,6 +793,7 @@ onMounted(async () => {
 .appointment-row-actions :deep(.v-chip) { border-radius: 4px; }
 .cancel-appointment-button { border-color: rgba(139, 150, 168, 0.5) !important; border-radius: 4px !important; color: var(--slate) !important; text-transform: none; }
 .no-show-button { border-color: rgba(93, 138, 196, 0.65) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
+.complete-button { border-color: rgba(31, 59, 99, 0.55) !important; border-radius: 4px !important; color: var(--navy) !important; text-transform: none; }
 .manual-panel { height: 100%; }
 .manual-panel .section-kicker { color: var(--steel-blue); }
 .manual-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: -4px 0 20px; }
