@@ -136,6 +136,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const swipeStartX = ref<number | null>(null)
 const swipeAppointmentId = ref<string | null>(null)
+const swipeOffset = ref(0)
 const pendingAction = ref<{ type: 'complete' | 'cancel'; appointment: AdminAppointment } | null>(null)
 const processingAction = ref(false)
 const token = () => auth.accessToken ?? undefined
@@ -328,14 +329,22 @@ function beginAppointmentSwipe(event: PointerEvent, appointment: AdminAppointmen
   if ((event.target as HTMLElement).closest('button, input, select, textarea')) return
   swipeStartX.value = event.clientX
   swipeAppointmentId.value = appointment.id
+  swipeOffset.value = 0
   ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
 }
 
-async function finishAppointmentSwipe(event: PointerEvent, appointment: AdminAppointment) {
+function moveAppointmentSwipe(event: PointerEvent, appointment: AdminAppointment) {
   if (swipeStartX.value === null || swipeAppointmentId.value !== appointment.id) return
   const distance = event.clientX - swipeStartX.value
+  swipeOffset.value = Math.max(-140, Math.min(140, distance))
+}
+
+async function finishAppointmentSwipe(appointment: AdminAppointment) {
+  if (swipeStartX.value === null || swipeAppointmentId.value !== appointment.id) return
+  const distance = swipeOffset.value
   swipeStartX.value = null
   swipeAppointmentId.value = null
+  swipeOffset.value = 0
   if (Math.abs(distance) < 90) return
   if (distance > 0 && appointment.status === 'CONFIRMED') completeAppointment(appointment)
   if (distance < 0 && ['PENDING', 'CONFIRMED'].includes(appointment.status)) cancelAdminAppointment(appointment)
@@ -604,9 +613,12 @@ onMounted(async () => {
               v-for="appointment in appointments"
               :key="appointment.id"
               class="appointment-row"
+              :class="{ 'appointment-row--dragging': swipeAppointmentId === appointment.id }"
+              :style="swipeAppointmentId === appointment.id ? { transform: `translateX(${swipeOffset}px)` } : undefined"
               @pointerdown="beginAppointmentSwipe($event, appointment)"
-              @pointerup="finishAppointmentSwipe($event, appointment)"
-              @pointercancel="swipeStartX = null; swipeAppointmentId = null"
+              @pointermove="moveAppointmentSwipe($event, appointment)"
+              @pointerup="finishAppointmentSwipe(appointment)"
+              @pointercancel="swipeStartX = null; swipeAppointmentId = null; swipeOffset = 0"
             >
               <div>
                 <strong>{{ formatTime(appointment.start_time) }} · {{ appointment.customer_name }}</strong>
@@ -849,7 +861,8 @@ onMounted(async () => {
 .metric-card strong { display: block; overflow: hidden; margin: 10px 0 8px; color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .agenda-section { height: 100%; }
 .filter-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 12px; }
-.appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); touch-action: pan-y; user-select: none; }
+.appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); touch-action: pan-y; user-select: none; transform: translateX(0); transition: transform 180ms ease, background-color 180ms ease; }
+.appointment-row--dragging { z-index: 1; cursor: grabbing; background: rgba(93, 138, 196, 0.08); box-shadow: 0 8px 18px rgba(15, 27, 46, 0.08); transition: none; }
 .appointment-row:last-child { border-bottom: 0; }
 .appointment-row strong, .appointment-row span { display: block; }
 .appointment-row span { margin-top: 5px; color: var(--slate); font-size: 0.8rem; }
