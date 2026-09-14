@@ -136,6 +136,8 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const swipeStartX = ref<number | null>(null)
 const swipeAppointmentId = ref<string | null>(null)
+const pendingAction = ref<{ type: 'complete' | 'cancel'; appointment: AdminAppointment } | null>(null)
+const processingAction = ref(false)
 const token = () => auth.accessToken ?? undefined
 
 const editing = () => Boolean(form.value.id)
@@ -280,16 +282,34 @@ async function createManualAppointment() {
 }
 
 async function cancelAdminAppointment(appointment: AdminAppointment) {
-  if (!window.confirm(`Cancelar o agendamento de ${appointment.customer_name}?`)) return
+  pendingAction.value = { type: 'cancel', appointment }
+}
+
+async function completeAppointment(appointment: AdminAppointment) {
+  pendingAction.value = { type: 'complete', appointment }
+}
+
+async function confirmPendingAction() {
+  if (!pendingAction.value) return
+  const action = pendingAction.value
+  pendingAction.value = null
+  processingAction.value = true
   try {
-    await apiRequest<AdminAppointment>(`/admin/appointments/${appointment.id}/cancel`, {
-      method: 'PATCH',
-      body: JSON.stringify({ reason: 'Cancelado pelo administrador' }),
-    }, token())
-    successMessage.value = 'Agendamento cancelado.'
+    if (action.type === 'cancel') {
+      await apiRequest<AdminAppointment>(`/admin/appointments/${action.appointment.id}/cancel`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason: 'Cancelado pelo administrador' }),
+      }, token())
+      successMessage.value = 'Agendamento cancelado.'
+    } else {
+      await apiRequest<AdminAppointment>(`/admin/appointments/${action.appointment.id}/complete`, { method: 'PATCH' }, token())
+      successMessage.value = 'Atendimento concluído.'
+    }
     await Promise.all([loadAppointments(), loadStats()])
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível cancelar o agendamento.'
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível atualizar o agendamento.'
+  } finally {
+    processingAction.value = false
   }
 }
 
@@ -301,17 +321,6 @@ async function markNoShow(appointment: AdminAppointment) {
     await Promise.all([loadAppointments(), loadStats()])
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Não foi possível atualizar o agendamento.'
-  }
-}
-
-async function completeAppointment(appointment: AdminAppointment) {
-  if (!window.confirm(`Marcar o atendimento de ${appointment.customer_name} como concluído?`)) return
-  try {
-    await apiRequest<AdminAppointment>(`/admin/appointments/${appointment.id}/complete`, { method: 'PATCH' }, token())
-    successMessage.value = 'Atendimento concluído.'
-    await Promise.all([loadAppointments(), loadStats()])
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível concluir o atendimento.'
   }
 }
 
@@ -328,8 +337,8 @@ async function finishAppointmentSwipe(event: PointerEvent, appointment: AdminApp
   swipeStartX.value = null
   swipeAppointmentId.value = null
   if (Math.abs(distance) < 90) return
-  if (distance > 0 && appointment.status === 'CONFIRMED') await completeAppointment(appointment)
-  if (distance < 0 && ['PENDING', 'CONFIRMED'].includes(appointment.status)) await cancelAdminAppointment(appointment)
+  if (distance > 0 && appointment.status === 'CONFIRMED') completeAppointment(appointment)
+  if (distance < 0 && ['PENDING', 'CONFIRMED'].includes(appointment.status)) cancelAdminAppointment(appointment)
 }
 
 async function saveService() {
@@ -775,6 +784,21 @@ onMounted(async () => {
           </v-row>
         </v-col>
       </v-row>
+
+      <v-dialog :model-value="Boolean(pendingAction)" max-width="440" @update:model-value="(value) => !value && (pendingAction = null)">
+        <v-card class="confirmation-dialog">
+          <v-card-title>{{ pendingAction?.type === 'cancel' ? 'Cancelar agendamento?' : 'Concluir atendimento?' }}</v-card-title>
+          <v-card-text>
+            {{ pendingAction?.type === 'cancel'
+              ? `Deseja cancelar o agendamento de ${pendingAction.appointment.customer_name}?`
+              : `Deseja marcar o atendimento de ${pendingAction?.appointment.customer_name} como concluído?` }}
+          </v-card-text>
+          <v-card-actions>
+            <v-btn variant="text" :disabled="processingAction" @click="pendingAction = null">Não, voltar</v-btn>
+            <v-btn class="save-button" :loading="processingAction" @click="confirmPendingAction">Sim, confirmar</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-container>
   </main>
 </template>
@@ -852,6 +876,9 @@ onMounted(async () => {
 .exception-row span { margin-top: 4px; color: var(--slate); font-size: 0.8rem; }
 .settings-panel--dark .exception-row { border-color: var(--hairline-dark); }
 .settings-panel--dark .exception-row strong { color: var(--paper); }
+.confirmation-dialog { border: 1px solid var(--hairline) !important; border-radius: 8px !important; background: var(--paper) !important; }
+.confirmation-dialog .v-card-title { color: var(--ink); font-family: 'Instrument Serif', serif; font-size: 1.7rem; font-weight: 400; }
+.confirmation-dialog .v-card-text { color: var(--slate); }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); } .admin-nav-item { min-height: 46px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
