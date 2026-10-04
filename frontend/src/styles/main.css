@@ -102,6 +102,28 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+.v-application .v-alert--success {
+  border: 1px solid rgba(47, 158, 107, 0.52);
+  background: rgba(47, 158, 107, 0.14);
+  color: #8FE0B5;
+}
+
+.v-application .v-alert--error,
+.v-application .v-messages__message,
+.v-application .v-field--error .v-label,
+.v-application .v-field--error .v-icon {
+  color: var(--color-cancelled);
+}
+
+.v-application .v-alert--error {
+  border: 1px solid rgba(199, 81, 70, 0.58);
+  background: rgba(199, 81, 70, 0.14);
+}
+
+.v-application .v-field--error:not(.v-field--disabled) .v-field__outline {
+  color: var(--color-cancelled);
+}
+
 .global-app-bar {
   background: var(--navy-deep) !important;
   border-bottom: 1px solid var(--hairline-dark) !important;

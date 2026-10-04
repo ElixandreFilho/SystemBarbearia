@@ -150,6 +150,8 @@ const swipeOffset = ref(0)
 const pendingAction = ref<{ type: 'complete' | 'cancel'; appointment: AdminAppointment } | null>(null)
 const processingAction = ref(false)
 const token = () => auth.accessToken ?? undefined
+const requiredRule = (value: unknown) => Boolean(String(value ?? '').trim()) || 'Campo obrigatório'
+const positiveNumberRule = (value: unknown) => Number(value) > 0 || 'Informe um valor válido'
 
 const primaryNavItems = [
   { key: 'appointments', label: 'Agendamentos', icon: 'mdi-calendar-month-outline' },
@@ -423,7 +425,10 @@ async function loadManualSlots() {
 }
 
 async function createManualAppointment() {
-  if (!manualCustomerId.value || !manualServiceIds.value.length || !manualSlot.value) return
+  if (!manualCustomerId.value || !manualServiceIds.value.length || !manualSlot.value) {
+    errorMessage.value = 'Selecione cliente, serviço e horário para continuar.'
+    return
+  }
   creatingAppointment.value = true
   try {
     await apiRequest<AdminAppointment>('/admin/appointments', {
@@ -512,7 +517,18 @@ async function finishAppointmentSwipe(appointment: AdminAppointment) {
 async function saveService() {
   const price = Number(form.value.price.replace(',', '.'))
   const duration = Number(form.value.duration)
-  if (!form.value.name.trim() || !Number.isFinite(price) || !Number.isFinite(duration)) return
+  if (!form.value.name.trim()) {
+    errorMessage.value = 'Preencha o nome do serviço.'
+    return
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    errorMessage.value = 'Informe um preço válido para o serviço.'
+    return
+  }
+  if (!Number.isFinite(duration) || duration <= 0) {
+    errorMessage.value = 'Informe uma duração válida para o serviço.'
+    return
+  }
   saving.value = true
   errorMessage.value = ''
   successMessage.value = ''
@@ -889,8 +905,8 @@ onMounted(async () => {
           <section class="form-panel manual-panel">
             <p class="section-kicker">Operação</p>
             <h2>Agendar cliente</h2>
-            <v-select v-model="manualCustomerId" label="Cliente" :items="customers" item-title="full_name" item-value="id" variant="outlined" />
-            <v-select v-model="manualServiceIds" label="Serviços" :items="activeServices()" item-title="name" item-value="id" multiple chips variant="outlined" @update:model-value="loadManualSlots" />
+            <v-select v-model="manualCustomerId" label="Cliente" :items="customers" item-title="full_name" item-value="id" variant="outlined" :rules="[requiredRule]" />
+            <v-select v-model="manualServiceIds" label="Serviços" :items="activeServices()" item-title="name" item-value="id" multiple chips variant="outlined" :rules="[requiredRule]" @update:model-value="loadManualSlots" />
             <v-text-field v-model="manualDate" label="Data" type="date" variant="outlined" @change="loadManualSlots" />
             <div class="manual-slots">
               <v-btn v-for="slot in manualSlots" :key="slot" class="manual-slot" :class="{ 'manual-slot--selected': manualSlot === slot }" variant="outlined" size="small" @click="manualSlot = slot">{{ formatTime(slot) }}</v-btn>
@@ -954,11 +970,11 @@ onMounted(async () => {
           <section class="form-panel">
             <p class="section-kicker">{{ editing() ? 'Editar serviço' : 'Novo serviço' }}</p>
             <h2>{{ editing() ? 'Atualizar serviço' : 'Cadastrar serviço' }}</h2>
-            <v-text-field v-model="form.name" label="Nome do serviço" variant="outlined" />
+            <v-text-field v-model="form.name" label="Nome do serviço" variant="outlined" :rules="[requiredRule]" />
             <v-textarea v-model="form.description" label="Descrição" rows="3" variant="outlined" />
             <v-row>
-              <v-col cols="7"><v-text-field v-model="form.price" label="Preço (R$)" placeholder="35,00" variant="outlined" /></v-col>
-              <v-col cols="5"><v-text-field v-model="form.duration" label="Minutos" type="number" variant="outlined" /></v-col>
+              <v-col cols="7"><v-text-field v-model="form.price" label="Preço (R$)" placeholder="35,00" variant="outlined" :rules="[positiveNumberRule]" /></v-col>
+              <v-col cols="5"><v-text-field v-model="form.duration" label="Minutos" type="number" variant="outlined" :rules="[positiveNumberRule]" /></v-col>
             </v-row>
             <v-btn class="save-button" block :loading="saving" @click="saveService">
               {{ editing() ? 'Salvar alterações' : 'Cadastrar serviço' }}
@@ -986,7 +1002,7 @@ onMounted(async () => {
               <section class="form-panel">
                 <p class="section-kicker">{{ customerForm.id ? 'Editar cliente' : 'Novo cliente' }}</p>
                 <h2>{{ customerForm.id ? 'Atualizar cadastro' : 'Cadastrar cliente' }}</h2>
-                <v-text-field v-model="customerForm.full_name" label="Nome completo" variant="outlined" />
+                <v-text-field v-model="customerForm.full_name" label="Nome completo" variant="outlined" :rules="[requiredRule]" />
                 <v-text-field v-model="customerForm.email" label="E-mail" type="email" variant="outlined" />
                 <v-text-field v-model="customerForm.phone" label="Telefone" variant="outlined" />
                 <v-text-field v-model="customerForm.password" :label="customerForm.id ? 'Nova senha (opcional)' : 'Senha temporária'" type="password" variant="outlined" :hint="customerForm.id ? 'Deixe em branco para manter a senha atual.' : 'Mínimo de 8 caracteres.'" persistent-hint />
