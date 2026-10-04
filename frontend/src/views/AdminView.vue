@@ -1143,6 +1143,58 @@ onMounted(async () => {
 .confirmation-dialog { border: 1px solid var(--hairline) !important; border-radius: 8px !important; background: var(--paper) !important; }
 .confirmation-dialog .v-card-title { color: var(--ink); font-family: 'Instrument Serif', serif; font-size: 1.7rem; font-weight: 400; }
 .confirmation-dialog .v-card-text { color: var(--slate); }
+
+/* Painel premium: navegação lateral no desktop e superfície escura consistente. */
+.admin-content {
+  min-height: calc(100dvh - 64px);
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.admin-container { max-width: 1440px; }
+.admin-intro h1, .section-heading h2, .form-panel h2, .settings-panel h2 { color: var(--color-paper); }
+.admin-intro p:not(.section-kicker), .metric-card span, .metric-card small { color: var(--color-slate); }
+.admin-navigation { background: var(--color-navy-deep); border-color: rgba(var(--color-slate-rgb), 0.22); }
+.admin-nav-item { color: var(--color-paper); }
+.admin-nav-item:hover, .admin-nav-item--active { color: var(--color-paper); background: rgba(var(--color-steel-blue-rgb), 0.16); }
+.admin-section, .metric-card, .insight-panel, .settings-panel { background: var(--color-navy-deep); border-color: rgba(var(--color-slate-rgb), 0.24); }
+.admin-section:hover, .metric-card:hover { border-color: rgba(var(--color-steel-blue-rgb), 0.6); }
+.metric-card strong, .insight-heading h2, .insight-bar-label, .status-summary strong { color: var(--color-paper); }
+.metric-card--accent { background: rgba(var(--color-steel-blue-rgb), 0.16); }
+.metric-card--cancelled { background: rgba(var(--color-slate-rgb), 0.12); }
+.service-row:hover, .customer-row:hover, .day-row:hover { background: rgba(var(--color-steel-blue-rgb), 0.1); }
+.service-row strong, .customer-row strong, .day-row strong, .appointment-row strong, .exception-row strong { color: var(--color-paper); }
+.appointment-row { border-color: rgba(var(--color-paper-rgb), 0.14); }
+.appointment-row span, .service-row span, .customer-row span, .exception-row span { color: var(--color-slate); }
+.filter-bar :deep(.v-field), .manual-panel :deep(.v-field), .settings-panel--dark :deep(.v-field) { background: rgba(var(--color-ink-rgb), 0.34); }
+.filter-bar :deep(input), .filter-bar :deep(.v-label), .manual-panel :deep(input), .manual-panel :deep(.v-label), .settings-panel--dark :deep(input), .settings-panel--dark :deep(.v-label) { color: var(--color-paper); }
+.insight-panel--heatmap { background: var(--color-navy-deep); }
+
+@media (min-width: 961px) {
+  .admin-container { padding-left: 248px; }
+  .admin-navigation {
+    position: fixed;
+    z-index: 4;
+    top: 64px;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    width: 224px;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 18px 12px;
+    border-width: 0 1px 0 0;
+    background: var(--color-navy-deep);
+  }
+  .admin-nav-item { justify-content: flex-start; min-height: 46px; padding: 0 14px; border-radius: var(--radius-sm); }
+  .admin-nav-item--active { box-shadow: inset 3px 0 0 var(--color-steel-blue); }
+}
+
+@media (max-width: 960px) {
+  .admin-content { background: var(--color-ink); }
+  .admin-navigation { background: var(--color-navy-deep); }
+  .admin-section, .form-panel, .metric-card, .insight-panel, .settings-panel { background: var(--color-navy-deep); }
+}
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>

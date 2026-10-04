@@ -451,4 +451,22 @@ onMounted(loadDashboard)
 .edit-summary strong { color: var(--navy); }
 @media (max-width: 960px) { .booking-panel { position: static; } }
 @media (max-width: 600px) { .dashboard-content { padding: 28px 12px 56px; } .dashboard-intro { margin-bottom: 24px; } .dashboard-intro h1 { font-size: 2.25rem; } .dashboard-section, .booking-panel { padding: 18px; } .section-heading { align-items: flex-start; flex-direction: column; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-actions { width: 100%; justify-content: space-between; } .slot-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Superfície escura compartilhada com o painel administrativo. */
+.dashboard-content { background: var(--color-ink); color: var(--color-paper); }
+.dashboard-intro h1, .section-heading h2 { color: var(--color-paper); }
+.dashboard-intro p:not(.section-kicker), .selection-count { color: var(--color-slate); }
+.dashboard-section, .booking-panel { background: var(--color-navy-deep); border-color: rgba(var(--color-slate-rgb), 0.24); }
+.dashboard-section:hover { border-color: rgba(var(--color-steel-blue-rgb), 0.6); }
+.service-card { border-color: rgba(var(--color-slate-rgb), 0.28); color: var(--color-paper); }
+.service-card:hover, .service-card--selected { background: rgba(var(--color-steel-blue-rgb), 0.16); border-color: var(--color-steel-blue); }
+.service-content small, .appointment-row span, .service-meta, .cancel-button { color: var(--color-slate); }
+.service-meta b, .edit-button { color: var(--color-steel-blue); }
+.appointment-row { border-color: rgba(var(--color-paper-rgb), 0.14); }
+.empty-state, .empty-slots { color: var(--color-slate); }
+.edit-dialog { background: var(--color-navy-deep) !important; border-color: rgba(var(--color-slate-rgb), 0.28) !important; }
+.edit-dialog :deep(.v-card-title), .edit-dialog :deep(.v-label), .edit-dialog :deep(input), .edit-dialog :deep(textarea) { color: var(--color-paper); }
+.edit-dialog-intro, .edit-summary { color: var(--color-slate); }
+.edit-summary strong { color: var(--color-paper); }
+.booking-panel :deep(.v-field) { background: rgba(var(--color-ink-rgb), 0.32); }
 </style>

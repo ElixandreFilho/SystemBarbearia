@@ -104,13 +104,13 @@ async function submit() {
   width: min(100%, 400px);
   border: 1px solid var(--surface-steel-blue-border-soft) !important;
   border-radius: 18px !important;
-  background: var(--color-white) !important;
+  background: rgba(var(--color-navy-deep-rgb), 0.94) !important;
   box-shadow: var(--shadow-auth) !important;
 }
 
 .login-brand {
   padding: 32px 24px 8px;
-  color: var(--color-ink);
+  color: var(--color-paper);
   text-align: center;
 }
 
@@ -133,7 +133,7 @@ async function submit() {
 
 .login-brand h1 {
   margin: 8px 0 0;
-  color: var(--color-navy-deep);
+  color: var(--color-paper);
   font-family: 'Manrope', sans-serif;
   font-size: clamp(2rem, 10vw, 2.8rem);
   font-weight: 700;
@@ -159,7 +159,18 @@ async function submit() {
 .login-field :deep(.v-field) {
   min-height: 52px;
   border-radius: 8px;
-  background: var(--color-white);
+  background: rgba(var(--color-ink-rgb), 0.24);
+}
+
+.login-field :deep(.v-field__input),
+.login-field :deep(.v-label),
+.login-field :deep(.v-field__prepend-inner),
+.login-field :deep(.v-field__append-inner) {
+  color: var(--color-paper);
+}
+
+.login-field :deep(.v-field__outline) {
+  color: rgba(var(--color-slate-rgb), 0.5);
 }
 
 .login-field :deep(.v-field--focused) {
@@ -170,8 +181,8 @@ async function submit() {
   min-height: 48px;
   margin-top: 4px;
   border-radius: 8px !important;
-  background: var(--color-navy-deep) !important;
-  color: var(--color-white) !important;
+  background: var(--color-steel-blue) !important;
+  color: var(--color-paper) !important;
   font-family: 'Manrope', sans-serif;
   font-weight: 600;
   text-transform: none;
@@ -179,7 +190,7 @@ async function submit() {
 }
 
 .login-submit:hover {
-  background: var(--color-navy) !important;
+  background: var(--color-steel-blue-hover) !important;
 }
 
 .login-submit:active {
@@ -203,7 +214,7 @@ async function submit() {
 }
 
 .forgot-link {
-  color: var(--color-ink);
+  color: var(--color-paper);
 }
 
 .register-link {
