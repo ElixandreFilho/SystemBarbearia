@@ -169,20 +169,20 @@ const serviceChartOptions = computed<ApexOptions>(() => ({
   labels: serviceChartLabels.value,
   colors: ['var(--color-steel-blue)', 'var(--color-navy)', 'var(--color-slate)', 'var(--color-navy-deep)', 'var(--color-paper)'],
   dataLabels: { enabled: false },
-  legend: { position: 'bottom', fontFamily: 'Manrope, sans-serif', labels: { colors: 'var(--color-ink)' } },
-  stroke: { colors: ['var(--color-paper)'] },
+  legend: { position: 'bottom', fontFamily: 'Manrope, sans-serif', labels: { colors: 'var(--color-paper)' } },
+  stroke: { colors: ['var(--color-navy-deep)'] },
   plotOptions: { pie: { donut: { size: '66%', labels: { show: true, total: { show: true, label: 'Agendamentos', color: 'var(--color-slate)' } } } } },
-  tooltip: { theme: 'light' },
+  tooltip: { theme: 'dark' },
 }))
 const statusChartOptions = computed<ApexOptions>(() => ({
   chart: { type: 'donut', toolbar: { show: false }, fontFamily: 'Manrope, sans-serif' },
   labels: ['Confirmados', 'Concluídos', 'Cancelados'],
   colors: ['var(--color-steel-blue)', 'var(--color-navy)', 'var(--color-slate)'],
   dataLabels: { enabled: false },
-  legend: { position: 'bottom', fontFamily: 'Manrope, sans-serif', labels: { colors: 'var(--color-ink)' } },
-  stroke: { colors: ['var(--color-paper)'] },
+  legend: { position: 'bottom', fontFamily: 'Manrope, sans-serif', labels: { colors: 'var(--color-paper)' } },
+  stroke: { colors: ['var(--color-navy-deep)'] },
   plotOptions: { pie: { donut: { size: '66%', labels: { show: true, total: { show: true, label: 'Status', color: 'var(--color-slate)' } } } } },
-  tooltip: { theme: 'light' },
+  tooltip: { theme: 'dark' },
 }))
 const heatmapSeries = computed(() => {
   const counts = new Map<string, number>()
@@ -1154,6 +1154,7 @@ onMounted(async () => {
 .admin-intro h1, .section-heading h2, .form-panel h2, .settings-panel h2 { color: var(--color-paper); }
 .admin-intro p:not(.section-kicker), .metric-card span, .metric-card small { color: var(--color-slate); }
 .admin-navigation { background: var(--color-navy-deep); border-color: rgba(var(--color-slate-rgb), 0.22); }
+.admin-navigation::before { content: 'Sistema Barbearia'; display: none; color: var(--color-paper); font-family: var(--font-display); font-size: 1.25rem; }
 .admin-nav-item { color: var(--color-paper); }
 .admin-nav-item:hover, .admin-nav-item--active { color: var(--color-paper); background: rgba(var(--color-steel-blue-rgb), 0.16); }
 .admin-section, .metric-card, .insight-panel, .settings-panel { background: var(--color-navy-deep); border-color: rgba(var(--color-slate-rgb), 0.24); }
@@ -1186,6 +1187,7 @@ onMounted(async () => {
     border-width: 0 1px 0 0;
     background: var(--color-navy-deep);
   }
+  .admin-navigation::before { display: block; margin: 2px 14px 22px; }
   .admin-nav-item { justify-content: flex-start; min-height: 46px; padding: 0 14px; border-radius: var(--radius-sm); }
   .admin-nav-item--active { box-shadow: inset 3px 0 0 var(--color-steel-blue); }
 }
@@ -1194,6 +1196,7 @@ onMounted(async () => {
   .admin-content { background: var(--color-ink); }
   .admin-navigation { background: var(--color-navy-deep); }
   .admin-section, .form-panel, .metric-card, .insight-panel, .settings-panel { background: var(--color-navy-deep); }
+  .admin-navigation::before { display: none; }
 }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
