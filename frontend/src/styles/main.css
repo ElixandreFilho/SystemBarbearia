@@ -44,6 +44,21 @@ body {
   outline-offset: 3px;
 }
 
+.v-application .v-btn,
+.v-application button,
+.v-application [role='button'] {
+  min-height: 44px;
+}
+
+.v-application .v-btn.v-btn--icon {
+  min-width: 44px;
+}
+
+.v-application :disabled,
+.v-application [aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
 .v-application .v-field:focus-within,
 .v-application .v-btn:focus-visible {
   box-shadow: var(--focus-ring);
