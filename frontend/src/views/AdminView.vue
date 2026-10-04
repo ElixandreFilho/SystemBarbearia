@@ -134,6 +134,7 @@ const specialDateForm = ref({ date: formatDate(new Date()), label: '', is_closed
 const blockedSlotForm = ref({ date: formatDate(new Date()), start_time: '12:00', end_time: '14:00', reason: '' })
 const filterDate = ref(formatDate(new Date()))
 const filterStatus = ref('')
+const dashboardPeriod = ref<'today' | '7d' | '30d' | 'all'>('30d')
 const manualDate = ref(formatDate(new Date()))
 const manualCustomerId = ref('')
 const manualServiceIds = ref<string[]>([])
@@ -363,7 +364,16 @@ async function loadAppointments() {
 
 async function loadStats() {
   try {
-    stats.value = await apiRequest<DashboardStats>('/admin/appointments/dashboard', {}, token())
+    const query = new URLSearchParams()
+    if (dashboardPeriod.value !== 'all') {
+      const start = new Date()
+      start.setHours(12, 0, 0, 0)
+      if (dashboardPeriod.value === '7d') start.setDate(start.getDate() - 6)
+      if (dashboardPeriod.value === '30d') start.setDate(start.getDate() - 29)
+      query.set('from', formatDate(start))
+      query.set('to', formatDate(new Date()))
+    }
+    stats.value = await apiRequest<DashboardStats>(`/admin/appointments/dashboard${query.toString() ? `?${query.toString()}` : ''}`, {}, token())
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Não foi possível carregar os indicadores.'
   }
@@ -697,6 +707,18 @@ onMounted(async () => {
 
       <v-row v-else class="admin-grid">
         <v-col v-if="adminSection === 'dashboard'" cols="12">
+          <div class="dashboard-toolbar">
+            <div>
+              <p class="section-kicker">Visão geral</p>
+              <h2>Desempenho da barbearia</h2>
+            </div>
+            <v-btn-toggle v-model="dashboardPeriod" mandatory density="comfortable" class="period-toggle" @update:model-value="loadStats">
+              <v-btn value="today">Hoje</v-btn>
+              <v-btn value="7d">7 dias</v-btn>
+              <v-btn value="30d">30 dias</v-btn>
+              <v-btn value="all">Todos</v-btn>
+            </v-btn-toggle>
+          </div>
           <section class="metrics-grid">
             <article class="metric-card">
               <span>Agendamentos ativos</span>
@@ -1183,6 +1205,11 @@ onMounted(async () => {
 .admin-nav-item:hover, .admin-nav-item--active { color: var(--color-paper); background: rgba(var(--color-steel-blue-rgb), 0.16); }
 .admin-section, .metric-card, .insight-panel, .settings-panel { background: var(--color-navy-deep); border-color: rgba(var(--color-slate-rgb), 0.24); }
 .admin-section:hover, .metric-card:hover { border-color: rgba(var(--color-steel-blue-rgb), 0.6); }
+.dashboard-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+.dashboard-toolbar h2 { margin: 0; color: var(--color-paper); font-family: var(--font-display); font-size: 2rem; font-weight: 400; line-height: 1; }
+.period-toggle { border: 1px solid rgba(var(--color-slate-rgb), 0.28); background: var(--color-navy-deep); }
+.period-toggle :deep(.v-btn) { min-height: 40px; color: var(--color-slate); text-transform: none; }
+.period-toggle :deep(.v-btn--active) { background: var(--color-steel-blue); color: var(--color-paper); }
 .metric-card strong, .insight-heading h2, .insight-bar-label, .status-summary strong { color: var(--color-paper); }
 .metric-card--accent { background: rgba(var(--color-steel-blue-rgb), 0.16); }
 .metric-card--cancelled { background: rgba(var(--color-slate-rgb), 0.12); }
@@ -1230,5 +1257,5 @@ onMounted(async () => {
   .admin-navigation::before { display: none; }
 }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel, .upcoming-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .upcoming-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; } .upcoming-row .appointment-status { grid-column: 2; } .upcoming-price { grid-column: 3; grid-row: 1 / span 2; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel, .upcoming-panel { padding: 18px; } .dashboard-toolbar { align-items: flex-start; flex-direction: column; } .dashboard-toolbar h2 { font-size: 1.75rem; } .period-toggle { width: 100%; } .period-toggle :deep(.v-btn) { flex: 1; min-width: 0; padding-inline: 6px; font-size: 0.74rem; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .upcoming-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; } .upcoming-row .appointment-status { grid-column: 2; } .upcoming-price { grid-column: 3; grid-row: 1 / span 2; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
