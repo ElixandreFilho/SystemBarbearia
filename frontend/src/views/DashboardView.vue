@@ -240,6 +240,8 @@ onMounted(loadDashboard)
                 <button
                   class="service-card"
                   :class="{ 'service-card--selected': selectedServiceIds.includes(service.id) }"
+                  :aria-pressed="selectedServiceIds.includes(service.id)"
+                  :aria-label="`${service.name}, ${service.duration_minutes} minutos, ${formatMoney(service.price_cents)}`"
                   type="button"
                   @click="selectedServiceIds = selectedServiceIds.includes(service.id)
                     ? selectedServiceIds.filter((id) => id !== service.id)
@@ -343,6 +345,7 @@ onMounted(loadDashboard)
                   :key="slot"
                   class="slot-button"
                   :class="{ 'slot-button--selected': selectedSlot === slot }"
+                  :aria-pressed="selectedSlot === slot"
                   variant="outlined"
                   @click="selectedSlot = slot"
                 >
@@ -397,13 +400,15 @@ onMounted(loadDashboard)
 .section-kicker { margin: 0 0 8px; color: var(--steel-blue); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .section-heading h2 { font-size: 2rem; line-height: 1.05; }
 .dashboard-grid { align-items: flex-start; }
-.dashboard-section, .booking-panel { border: 1px solid var(--hairline); background: var(--surface-white-soft); padding: 24px; }
+.dashboard-section, .booking-panel { border: 1px solid var(--hairline); background: var(--surface-white-soft); padding: 24px; transition: border-color var(--motion-fast), background-color var(--motion-fast); }
+.dashboard-section:hover { border-color: var(--hairline-strong); }
 .booking-panel { position: sticky; top: 88px; border-color: var(--surface-navy-border); background: var(--navy-deep); color: var(--paper); }
 .booking-panel .section-heading h2, .booking-panel .section-kicker { color: var(--paper); }
 .booking-panel .section-kicker { color: var(--steel-blue); }
 .loading-line { margin: 24px 0; }
 .selection-count { color: var(--slate); font-size: 0.82rem; }
-.service-card { display: flex; width: 100%; min-height: 148px; gap: 16px; padding: 20px; border: 1px solid var(--hairline); background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: border-color 180ms ease, background-color 180ms ease; }
+.service-card { display: flex; width: 100%; min-height: 148px; gap: 16px; padding: 20px; border: 1px solid var(--hairline); background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: border-color var(--motion-fast), background-color var(--motion-fast), transform var(--motion-fast); }
+.service-card:active { transform: scale(0.99); }
 .service-card:hover, .service-card--selected { border-color: var(--steel-blue); background: var(--surface-steel-blue-soft); }
 .service-card:focus-visible { outline: 2px solid var(--steel-blue); outline-offset: 3px; }
 .service-check { display: grid; width: 28px; height: 28px; flex: 0 0 28px; place-items: center; border: 1px solid var(--slate); color: var(--steel-blue); }
@@ -436,12 +441,14 @@ onMounted(loadDashboard)
 .slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
 .slot-button { border-color: var(--surface-paper-outline) !important; border-radius: 4px !important; color: var(--paper) !important; text-transform: none; }
 .slot-button--selected { border-color: var(--steel-blue) !important; background: var(--steel-blue) !important; }
-.book-button { min-height: 48px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
+.book-button { min-height: 48px; border-radius: var(--radius-sm) !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; transition: transform var(--motion-fast), background-color var(--motion-fast); }
+.book-button:hover { background: var(--color-steel-blue-hover) !important; }
+.book-button:active { transform: scale(0.98); }
 .logout-button { color: var(--steel-blue); text-transform: none; }
 .edit-dialog { border: 1px solid var(--hairline) !important; border-radius: 8px !important; background: var(--paper) !important; }
 .edit-dialog-intro { margin: 0 0 20px; color: var(--slate); font-size: 0.88rem; }
 .edit-summary { display: flex; justify-content: space-between; margin: 4px 0 18px; color: var(--slate); }
 .edit-summary strong { color: var(--navy); }
 @media (max-width: 960px) { .booking-panel { position: static; } }
-@media (max-width: 600px) { .dashboard-content { padding: 28px 12px 56px; } .dashboard-intro { margin-bottom: 24px; } .dashboard-section, .booking-panel { padding: 18px; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-actions { width: 100%; justify-content: space-between; } }
+@media (max-width: 600px) { .dashboard-content { padding: 28px 12px 56px; } .dashboard-intro { margin-bottom: 24px; } .dashboard-intro h1 { font-size: 2.25rem; } .dashboard-section, .booking-panel { padding: 18px; } .section-heading { align-items: flex-start; flex-direction: column; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-actions { width: 100%; justify-content: space-between; } .slot-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>
