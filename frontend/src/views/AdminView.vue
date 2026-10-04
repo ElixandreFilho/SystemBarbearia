@@ -1344,6 +1344,17 @@ onMounted(async () => {
 .day-period { padding: 8px; border: 1px solid rgba(var(--color-slate-rgb), 0.16); border-radius: var(--radius-sm); background: rgba(var(--color-navy-deep-rgb), 0.5); }
 .settings-panel, .form-panel { box-shadow: 0 12px 30px rgba(var(--color-ink-rgb), 0.18); }
 .settings-panel .v-btn, .form-panel .v-btn { min-height: 44px; }
+.settings-panel { display: flex; min-height: 100%; flex-direction: column; padding: 28px; }
+.settings-panel h2 { margin-bottom: 28px; }
+.settings-panel > .v-text-field { margin-bottom: 8px; }
+.settings-panel > .v-row { margin: 0 -6px; }
+.settings-panel > .v-row > .v-col { padding: 0 6px; }
+.settings-panel > .v-btn { align-self: flex-start; min-width: 210px; margin-top: auto; }
+.settings-panel :deep(.v-field) { min-height: 54px; border-radius: var(--radius-btn); }
+.settings-panel :deep(.v-field__input) { min-height: 52px; }
+.settings-panel :deep(.v-label) { font-size: 0.82rem; }
+.settings-panel :deep(.v-messages) { min-height: 18px; }
+.settings-panel--dark :deep(.v-field) { background: rgba(var(--color-ink-rgb), 0.28); }
 .exception-row { align-items: flex-start; }
 .exception-row .v-btn { flex: 0 0 auto; min-height: 40px; color: var(--color-slate); text-transform: none; }
 @media (max-width: 600px) {
