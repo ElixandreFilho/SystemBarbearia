@@ -81,6 +81,34 @@ body {
   letter-spacing: 0;
 }
 
+.global-user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-paper);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.global-user-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-user-avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid rgba(var(--color-steel-blue-rgb), 0.65);
+  border-radius: 50%;
+  background: var(--color-navy);
+  color: var(--color-paper);
+  font-size: 0.76rem;
+}
+
 body:has(.auth-page) .global-app-bar {
   display: none;
 }
@@ -366,6 +394,11 @@ body:has(.auth-page) .global-app-bar {
     padding-top: 24px;
     padding-bottom: 28px;
   }
+}
+
+@media (max-width: 600px) {
+  .global-user-name { display: none; }
+  .global-app-bar .v-toolbar__content { padding-inline: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
