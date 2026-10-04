@@ -616,6 +616,7 @@ onMounted(async () => {
           :key="item.key"
           class="admin-nav-item"
           :class="{ 'admin-nav-item--active': adminSection === item.key }"
+          :aria-current="adminSection === item.key ? 'page' : undefined"
           type="button"
           @click="adminSection = item.key"
         >
@@ -933,12 +934,14 @@ onMounted(async () => {
 .admin-intro h1 { font-size: clamp(2.3rem, 5vw, 3.5rem); line-height: 1; }
 .admin-intro p:not(.section-kicker) { margin: 12px 0 0; color: var(--slate); }
 .admin-navigation { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: var(--surface-white-medium); }
-.admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: 'Manrope', sans-serif; font-size: 0.84rem; font-weight: 600; transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease; }
+.admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: var(--font-ui); font-size: 0.84rem; font-weight: 600; transition: border-color var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast), transform var(--motion-fast); }
+.admin-nav-item:active { transform: scale(0.98); }
 .admin-nav-item:hover, .admin-nav-item--active { border-color: var(--surface-steel-blue-border); background: var(--surface-steel-blue-subtle); color: var(--navy); }
 .admin-nav-item--active { box-shadow: inset 0 -2px 0 var(--steel-blue); }
 .section-kicker { margin: 0 0 8px; color: var(--steel-blue); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .section-heading h2, .form-panel h2 { font-size: 2rem; line-height: 1.05; }
-.admin-section, .form-panel { border: 1px solid var(--hairline); padding: 24px; background: var(--surface-white-soft); }
+.admin-section, .form-panel { border: 1px solid var(--hairline); padding: 24px; background: var(--surface-white-soft); transition: border-color var(--motion-fast); }
+.admin-section:hover { border-color: var(--hairline-strong); }
 .form-panel { position: sticky; top: 88px; background: var(--navy-deep); }
 .form-panel h2 { margin-bottom: 24px; color: var(--paper); }
 .form-panel :deep(.v-label), .form-panel :deep(input), .form-panel :deep(textarea) { color: var(--paper); }
@@ -1016,5 +1019,5 @@ onMounted(async () => {
 .confirmation-dialog .v-card-title { color: var(--ink); font-family: 'Instrument Serif', serif; font-size: 1.7rem; font-weight: 400; }
 .confirmation-dialog .v-card-text { color: var(--slate); }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-section, .form-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); } .admin-nav-item { min-height: 46px; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
