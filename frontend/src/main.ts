@@ -12,6 +12,7 @@ import * as directives from 'vuetify/directives'
 
 import App from './App.vue'
 import router from './router'
+import './styles/tokens.css'
 import './styles/design-tokens.css'
 import './styles/main.css'
 
@@ -35,6 +36,10 @@ const vuetify = createVuetify({
           warning: 'rgb(var(--color-slate-rgb))',
           success: 'rgb(var(--color-steel-blue-rgb))',
           info: 'rgb(var(--color-navy-rgb))',
+          confirmed: '#2F9E6B',
+          completed: 'rgb(var(--color-steel-blue-rgb))',
+          cancelled: '#C75146',
+          'no-show': '#B8860B',
           background: 'rgb(var(--color-paper-rgb))',
           surface: 'rgb(var(--color-paper-rgb))',
         },
@@ -48,6 +53,7 @@ const vuetify = createVuetify({
     VBtn: {
       rounded: 'sm',
       elevation: 0,
+      minHeight: 44,
     },
     VCard: {
       rounded: '0',

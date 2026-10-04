@@ -121,6 +121,7 @@ const savingHours = ref(false)
 const loadingAppointments = ref(false)
 const creatingAppointment = ref(false)
 const adminSection = ref('appointments')
+const moreMenuOpen = ref(false)
 const shopSettings = ref<ShopSettings | null>(null)
 const settingsForm = ref({ name: '', timezone: '', capacity: '2', booking_window_days: '2', min_cancellation_notice_minutes: '60', no_show_grace_minutes: '30', slot_granularity_minutes: '30' })
 const profileForm = ref({ full_name: auth.user?.full_name ?? '', email: auth.user?.email ?? '', phone: auth.user?.phone ?? '', password: '' })
@@ -149,6 +150,18 @@ const swipeOffset = ref(0)
 const pendingAction = ref<{ type: 'complete' | 'cancel'; appointment: AdminAppointment } | null>(null)
 const processingAction = ref(false)
 const token = () => auth.accessToken ?? undefined
+
+const primaryNavItems = [
+  { key: 'appointments', label: 'Agendamentos', icon: 'mdi-calendar-month-outline' },
+  { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
+  { key: 'customers', label: 'Clientes', icon: 'mdi-account-group-outline' },
+  { key: 'services', label: 'Serviços', icon: 'mdi-content-cut' },
+]
+const moreNavItems = [
+  { key: 'hours', label: 'Horários', icon: 'mdi-clock-outline' },
+  { key: 'exceptions', label: 'Exceções', icon: 'mdi-calendar-alert-outline' },
+  { key: 'settings', label: 'Configurações', icon: 'mdi-cog-outline' },
+]
 
 const editing = () => Boolean(form.value.id)
 const activeServices = () => services.value.filter((service) => service.is_active)
@@ -215,6 +228,11 @@ function formatMoney(cents: number) {
 
 function resetForm() {
   form.value = { id: '', name: '', description: '', price: '', duration: '30' }
+}
+
+function selectAdminSection(section: string) {
+  adminSection.value = section
+  moreMenuOpen.value = false
 }
 
 function editService(service: Service) {
@@ -680,21 +698,29 @@ onMounted(async () => {
 
       <nav class="admin-navigation" aria-label="Navegação administrativa">
         <button
-          v-for="item in [
-            { key: 'appointments', label: 'Agendamentos', icon: 'mdi-calendar-month-outline' },
-            { key: 'dashboard', label: 'Dashboard', icon: 'mdi-view-dashboard-outline' },
-            { key: 'services', label: 'Serviços', icon: 'mdi-content-cut' },
-            { key: 'customers', label: 'Clientes', icon: 'mdi-account-group-outline' },
-            { key: 'hours', label: 'Horários', icon: 'mdi-clock-outline' },
-            { key: 'exceptions', label: 'Exceções', icon: 'mdi-calendar-alert-outline' },
-            { key: 'settings', label: 'Configurações', icon: 'mdi-cog-outline' },
-          ]"
+          v-for="item in primaryNavItems"
           :key="item.key"
           class="admin-nav-item"
           :class="{ 'admin-nav-item--active': adminSection === item.key }"
           :aria-current="adminSection === item.key ? 'page' : undefined"
           type="button"
-          @click="adminSection = item.key"
+          @click="selectAdminSection(item.key)"
+        >
+          <v-icon :icon="item.icon" size="19" />
+          <span>{{ item.label }}</span>
+        </button>
+        <button class="admin-nav-more" type="button" :aria-expanded="moreMenuOpen" @click="moreMenuOpen = true">
+          <v-icon icon="mdi-dots-horizontal" size="19" />
+          <span>Mais</span>
+        </button>
+        <button
+          v-for="item in moreNavItems"
+          :key="`desktop-${item.key}`"
+          class="admin-nav-item admin-nav-item--desktop-only"
+          :class="{ 'admin-nav-item--active': adminSection === item.key }"
+          :aria-current="adminSection === item.key ? 'page' : undefined"
+          type="button"
+          @click="selectAdminSection(item.key)"
         >
           <v-icon :icon="item.icon" size="19" />
           <span>{{ item.label }}</span>
@@ -1060,6 +1086,21 @@ onMounted(async () => {
           </v-card-actions>
         </v-card>
       </v-dialog>
+      <v-bottom-sheet v-model="moreMenuOpen">
+        <v-card class="more-sheet">
+          <v-card-title>Mais opções</v-card-title>
+          <v-list bg-color="transparent" density="comfortable">
+            <v-list-item
+              v-for="item in moreNavItems"
+              :key="item.key"
+              :active="adminSection === item.key"
+              :prepend-icon="item.icon"
+              :title="item.label"
+              @click="selectAdminSection(item.key)"
+            />
+          </v-list>
+        </v-card>
+      </v-bottom-sheet>
     </v-container>
   </main>
 </template>
@@ -1130,10 +1171,16 @@ onMounted(async () => {
 .appointment-row-actions :deep(.v-chip) { border-radius: 4px; }
 .appointment-status { display: inline-flex; align-items: center; gap: 6px; color: var(--slate); font-size: 0.76rem; white-space: nowrap; }
 .appointment-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--slate); }
-.appointment-status--confirmed i { background: var(--steel-blue); }
-.appointment-status--completed i { background: var(--navy); }
-.appointment-status--cancelled i, .appointment-status--no_show i { background: var(--slate); }
+.appointment-status--confirmed i { background: var(--color-confirmed); }
+.appointment-status--completed i { background: var(--color-completed); }
+.appointment-status--cancelled i { background: var(--color-cancelled); }
+.appointment-status--no_show i { background: var(--color-no-show); }
 .appointment-menu-button { min-width: 40px; color: var(--slate); }
+.admin-nav-more { display: none; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--color-paper); cursor: pointer; font-family: var(--font-ui); font-size: 0.84rem; font-weight: 600; }
+.more-sheet { padding: 8px 8px max(8px, env(safe-area-inset-bottom)); background: var(--color-navy-deep) !important; color: var(--color-paper); }
+.more-sheet .v-card-title { padding: 16px 16px 8px; font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; }
+.more-sheet :deep(.v-list-item) { min-height: 52px; border-radius: var(--radius-btn); color: var(--color-paper); }
+.more-sheet :deep(.v-list-item--active) { background: rgba(var(--color-steel-blue-rgb), 0.18); color: var(--color-paper); }
 .no-show-button, .cancel-appointment-button { display: none !important; }
 .swipe-hint { display: block; margin-top: 8px; color: var(--slate); font-size: 0.72rem; font-weight: 400; }
 @media (min-width: 601px) { .swipe-hint { display: none; } }
@@ -1252,6 +1299,13 @@ onMounted(async () => {
 }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .admin-content { padding: 28px 12px 100px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel, .upcoming-panel { padding: 18px; } .dashboard-toolbar { align-items: flex-start; flex-direction: column; } .dashboard-toolbar h2 { font-size: 1.75rem; } .period-toggle { width: 100%; } .period-toggle :deep(.v-btn) { flex: 1; min-width: 0; padding-inline: 6px; font-size: 0.74rem; } .admin-navigation { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; width: auto; grid-template-columns: none; gap: 2px; margin: 0; padding: 6px max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-bottom)); overflow-x: auto; border-width: 1px 0 0; } .admin-nav-item { min-width: 88px; min-height: 56px; flex: 0 0 88px; flex-direction: column; gap: 2px; padding-inline: 4px; font-size: 0.66rem; } .admin-nav-item .v-icon { display: block; } .admin-nav-item--active { box-shadow: inset 0 3px 0 var(--color-steel-blue); } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .upcoming-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; } .upcoming-row .appointment-status { grid-column: 2; } .upcoming-price { grid-column: 3; grid-row: 1 / span 2; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+
+@media (max-width: 768px) {
+  .admin-navigation { display: flex; }
+  .admin-nav-item--desktop-only { display: none; }
+  .admin-nav-more { display: flex; min-width: 88px; min-height: 56px; flex: 0 0 88px; flex-direction: column; gap: 2px; padding-inline: 4px; font-size: 0.66rem; }
+  .admin-nav-more[aria-expanded="true"] { box-shadow: inset 0 3px 0 var(--color-steel-blue); background: rgba(var(--color-steel-blue-rgb), 0.16); }
+}
 
 /* Refinamento dos blocos de gestão: leitura rápida, estados claros e toque confortável. */
 .service-row, .customer-row, .day-row, .exception-row {

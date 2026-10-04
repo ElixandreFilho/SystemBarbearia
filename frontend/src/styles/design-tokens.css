@@ -6,6 +6,10 @@
   --color-steel-blue: #5D8AC4;
   --color-paper: #F4F6F9;
   --color-slate: #8B96A8;
+  --color-confirmed: #2F9E6B;
+  --color-completed: #5D8AC4;
+  --color-cancelled: #C75146;
+  --color-no-show: #B8860B;
 
   --color-white: #FFFFFF;
   --color-white-rgb: 255, 255, 255;
@@ -39,8 +43,8 @@
   --shadow-auth: 0 18px 48px rgba(var(--color-ink-rgb), 0.28);
   --shadow-drag: 0 8px 18px rgba(var(--color-navy-deep-rgb), 0.08);
 
-  --font-display: 'Instrument Serif', Georgia, serif;
-  --font-ui: 'Manrope', Arial, sans-serif;
+  --font-display: var(--font-heading);
+  --font-ui: var(--font-body);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -52,7 +56,7 @@
 
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-lg: var(--radius-btn);
   --radius-auth: 18px;
 
   --hairline: rgba(var(--color-slate-rgb), 0.28);
