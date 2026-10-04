@@ -759,6 +759,30 @@ onMounted(async () => {
           </section>
         </v-col>
 
+        <v-col v-if="adminSection === 'dashboard'" cols="12">
+          <section class="upcoming-panel">
+            <div class="insight-heading">
+              <div>
+                <p class="section-kicker">Agenda</p>
+                <h2>Próximos atendimentos</h2>
+              </div>
+              <v-btn variant="outlined" color="slate" size="small" @click="adminSection = 'appointments'">Ver agenda</v-btn>
+            </div>
+            <div v-if="!appointments.length" class="empty-state empty-state--compact">Nenhum atendimento encontrado para a data selecionada.</div>
+            <div v-for="appointment in appointments.slice(0, 5)" :key="`upcoming-${appointment.id}`" class="upcoming-row">
+              <div class="upcoming-time">{{ formatTime(appointment.start_time) }}</div>
+              <div class="upcoming-main">
+                <strong>{{ appointment.customer_name }}</strong>
+                <span>{{ appointment.service_names.join(' · ') }}</span>
+              </div>
+              <span class="appointment-status" :class="`appointment-status--${appointment.status.toLowerCase()}`">
+                <i aria-hidden="true" />{{ statusLabel(appointment.status) }}
+              </span>
+              <strong class="upcoming-price">{{ formatMoney(appointment.total_price_cents) }}</strong>
+            </div>
+          </section>
+        </v-col>
+
         <v-col v-if="adminSection === 'appointments'" cols="12" lg="7">
           <section class="admin-section agenda-section">
             <div class="section-heading">
@@ -1169,6 +1193,13 @@ onMounted(async () => {
 .filter-bar :deep(.v-field), .manual-panel :deep(.v-field), .settings-panel--dark :deep(.v-field) { background: rgba(var(--color-ink-rgb), 0.34); }
 .filter-bar :deep(input), .filter-bar :deep(.v-label), .manual-panel :deep(input), .manual-panel :deep(.v-label), .settings-panel--dark :deep(input), .settings-panel--dark :deep(.v-label) { color: var(--color-paper); }
 .insight-panel--heatmap { background: var(--color-navy-deep); }
+.upcoming-panel { margin-top: 12px; padding: 20px; border: 1px solid rgba(var(--color-slate-rgb), 0.24); background: var(--color-navy-deep); }
+.upcoming-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid rgba(var(--color-paper-rgb), 0.12); }
+.upcoming-time { color: var(--color-steel-blue); font-size: 1.15rem; font-weight: 600; }
+.upcoming-main strong, .upcoming-main span { display: block; }
+.upcoming-main strong { color: var(--color-paper); font-size: 0.9rem; }
+.upcoming-main span { margin-top: 4px; overflow: hidden; color: var(--color-slate); font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.upcoming-price { color: var(--color-paper); font-size: 0.85rem; }
 
 @media (min-width: 961px) {
   .admin-container { padding-left: 248px; }
@@ -1199,5 +1230,5 @@ onMounted(async () => {
   .admin-navigation::before { display: none; }
 }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel, .upcoming-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .upcoming-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; } .upcoming-row .appointment-status { grid-column: 2; } .upcoming-price { grid-column: 3; grid-row: 1 / span 2; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
