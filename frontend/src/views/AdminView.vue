@@ -658,6 +658,36 @@ onMounted(async () => {
               <small>{{ stats?.popular_services?.[0]?.bookings || 0 }} agendamento(s)</small>
             </article>
           </section>
+          <section class="dashboard-insights" aria-label="Resumo da operação">
+            <article class="insight-panel">
+              <div class="insight-heading">
+                <div>
+                  <p class="section-kicker">Catálogo</p>
+                  <h2>Serviços mais procurados</h2>
+                </div>
+                <v-icon icon="mdi-chart-donut" aria-hidden="true" />
+              </div>
+              <div v-if="!stats?.popular_services?.length" class="empty-state empty-state--compact">Ainda não há dados suficientes.</div>
+              <div v-for="(service, index) in stats?.popular_services || []" :key="service.name" class="insight-bar-row">
+                <div class="insight-bar-label"><span>{{ service.name }}</span><strong>{{ service.bookings }}</strong></div>
+                <div class="insight-bar-track"><span :style="{ width: `${Math.max(8, ((service.bookings / (stats?.popular_services?.[0]?.bookings || 1)) * 100))}%` }" :class="`insight-bar-fill insight-bar-fill--${index % 3}`" /></div>
+              </div>
+            </article>
+            <article class="insight-panel">
+              <div class="insight-heading">
+                <div>
+                  <p class="section-kicker">Status</p>
+                  <h2>Resumo dos atendimentos</h2>
+                </div>
+                <v-icon icon="mdi-chart-arc" aria-hidden="true" />
+              </div>
+              <div class="status-summary">
+                <div><span class="status-dot status-dot--confirmed" />Confirmados<strong>{{ stats?.confirmed_appointments ?? 0 }}</strong></div>
+                <div><span class="status-dot status-dot--completed" />Concluídos<strong>{{ stats?.completed_appointments ?? 0 }}</strong></div>
+                <div><span class="status-dot status-dot--cancelled" />Cancelados<strong>{{ stats?.cancelled_appointments ?? 0 }}</strong></div>
+              </div>
+            </article>
+          </section>
         </v-col>
 
         <v-col v-if="adminSection === 'appointments'" cols="12" lg="7">
@@ -933,13 +963,14 @@ onMounted(async () => {
 .admin-intro h1, .section-heading h2, .form-panel h2 { margin: 0; color: var(--ink); font-family: 'Instrument Serif', serif; font-weight: 400; }
 .admin-intro h1 { font-size: clamp(2.3rem, 5vw, 3.5rem); line-height: 1; }
 .admin-intro p:not(.section-kicker) { margin: 12px 0 0; color: var(--slate); }
-.admin-navigation { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: var(--surface-white-medium); }
+.admin-navigation { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 28px; padding: 8px; border: 1px solid var(--hairline); background: var(--surface-white-medium); backdrop-filter: blur(8px); }
 .admin-nav-item { display: flex; min-height: 52px; align-items: center; justify-content: center; gap: 9px; border: 1px solid transparent; background: transparent; color: var(--navy); cursor: pointer; font-family: var(--font-ui); font-size: 0.84rem; font-weight: 600; transition: border-color var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast), transform var(--motion-fast); }
 .admin-nav-item:active { transform: scale(0.98); }
 .admin-nav-item:hover, .admin-nav-item--active { border-color: var(--surface-steel-blue-border); background: var(--surface-steel-blue-subtle); color: var(--navy); }
 .admin-nav-item--active { box-shadow: inset 0 -2px 0 var(--steel-blue); }
 .section-kicker { margin: 0 0 8px; color: var(--steel-blue); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .section-heading h2, .form-panel h2 { font-size: 2rem; line-height: 1.05; }
+.section-heading { margin-bottom: 4px; }
 .admin-section, .form-panel { border: 1px solid var(--hairline); padding: 24px; background: var(--surface-white-soft); transition: border-color var(--motion-fast); }
 .admin-section:hover { border-color: var(--hairline-strong); }
 .form-panel { position: sticky; top: 88px; background: var(--navy-deep); }
@@ -953,11 +984,31 @@ onMounted(async () => {
 .settings-panel--dark :deep(.v-label), .settings-panel--dark :deep(input) { color: var(--paper); }
 .settings-panel--dark :deep(.v-field__outline) { color: var(--surface-paper-outline-strong); }
 .metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.metric-card { min-height: 132px; padding: 20px; border: 1px solid var(--hairline); background: var(--surface-white-soft); }
+.metric-card { min-height: 132px; padding: 20px; border: 1px solid var(--hairline); background: var(--surface-white-soft); transition: border-color var(--motion-fast), transform var(--motion-fast); }
+.metric-card:hover { border-color: var(--hairline-strong); transform: translateY(-2px); }
 .metric-card--accent { border-color: var(--surface-navy-strong-border); background: var(--surface-steel-blue-soft); }
 .metric-card--cancelled { border-color: var(--surface-slate-border); background: var(--surface-slate-soft); }
 .metric-card span, .metric-card small { display: block; color: var(--slate); font-size: 0.78rem; }
 .metric-card strong { display: block; overflow: hidden; margin: 10px 0 8px; color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.insight-panel { min-height: 220px; padding: 20px; border: 1px solid var(--hairline); background: var(--surface-white-soft); }
+.insight-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.insight-heading h2 { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 1.55rem; font-weight: 400; line-height: 1.05; }
+.insight-heading > .v-icon { color: var(--steel-blue); }
+.insight-bar-row + .insight-bar-row { margin-top: 16px; }
+.insight-bar-label { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); font-size: 0.8rem; }
+.insight-bar-label strong { color: var(--slate); font-weight: 600; }
+.insight-bar-track { height: 6px; margin-top: 7px; overflow: hidden; background: rgba(var(--color-slate-rgb), 0.18); }
+.insight-bar-fill { display: block; height: 100%; background: var(--steel-blue); transition: width var(--motion-normal); }
+.insight-bar-fill--1 { background: var(--navy); }
+.insight-bar-fill--2 { background: var(--slate); }
+.status-summary { display: grid; gap: 14px; }
+.status-summary > div { display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 9px; color: var(--slate); font-size: 0.82rem; }
+.status-summary strong { color: var(--ink); font-size: 1rem; font-weight: 600; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--slate); }
+.status-dot--confirmed { background: var(--steel-blue); }
+.status-dot--completed { background: var(--navy); }
+.status-dot--cancelled { background: var(--slate); }
 .agenda-section { height: 100%; }
 .filter-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 12px; }
 .appointment-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); touch-action: pan-y; user-select: none; transform: translateX(0); transition: transform 180ms ease, background-color 180ms ease; }
@@ -987,13 +1038,15 @@ onMounted(async () => {
 .manual-slots .empty-slots { grid-column: 1 / -1; min-height: 48px; font-size: 0.78rem; }
 .admin-section + .admin-section { margin-top: 24px; }
 .loading-line { margin: 24px 0; }
-.service-row, .day-row { padding: 16px 0; border-bottom: 1px solid var(--hairline); }
+.service-row, .day-row { padding: 16px 0; border-bottom: 1px solid var(--hairline); transition: background-color var(--motion-fast); }
+.service-row:hover, .day-row:hover { background: var(--surface-steel-blue-soft); }
 .service-row:last-child { border-bottom: 0; }
 .service-row strong, .service-row span { display: block; }
 .service-row span { margin-top: 5px; color: var(--slate); font-size: 0.82rem; }
 .service-row--inactive { opacity: 0.58; }
 .customer-search { margin: 24px 0 8px; }
-.customer-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); }
+.customer-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hairline); transition: background-color var(--motion-fast); }
+.customer-row:hover { background: var(--surface-steel-blue-soft); }
 .customer-row:last-child { border-bottom: 0; }
 .customer-row strong, .customer-row span { display: block; }
 .customer-row span { margin-top: 5px; color: var(--slate); font-size: 0.82rem; }
@@ -1006,7 +1059,9 @@ onMounted(async () => {
 .day-period :deep(.v-checkbox) { min-width: 92px; }
 .day-period :deep(.v-input) { max-width: 120px; }
 .day-separator { color: var(--slate); font-size: 0.8rem; }
-.save-button { min-height: 46px; margin-top: 20px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
+.save-button { min-height: 46px; margin-top: 20px; border-radius: var(--radius-sm) !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; transition: transform var(--motion-fast), background-color var(--motion-fast); }
+.save-button:hover { background: var(--color-steel-blue-hover) !important; }
+.save-button:active { transform: scale(0.98); }
 .logout-button { color: var(--steel-blue); text-transform: none; }
 .empty-state { padding: 32px 0; color: var(--slate); }
 .exception-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--hairline); }
@@ -1019,5 +1074,5 @@ onMounted(async () => {
 .confirmation-dialog .v-card-title { color: var(--ink); font-family: 'Instrument Serif', serif; font-size: 1.7rem; font-weight: 400; }
 .confirmation-dialog .v-card-text { color: var(--slate); }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
