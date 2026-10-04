@@ -1252,4 +1252,36 @@ onMounted(async () => {
 }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 600px) { .admin-content { padding: 28px 12px 100px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel, .upcoming-panel { padding: 18px; } .dashboard-toolbar { align-items: flex-start; flex-direction: column; } .dashboard-toolbar h2 { font-size: 1.75rem; } .period-toggle { width: 100%; } .period-toggle :deep(.v-btn) { flex: 1; min-width: 0; padding-inline: 6px; font-size: 0.74rem; } .admin-navigation { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; width: auto; grid-template-columns: none; gap: 2px; margin: 0; padding: 6px max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-bottom)); overflow-x: auto; border-width: 1px 0 0; } .admin-nav-item { min-width: 88px; min-height: 56px; flex: 0 0 88px; flex-direction: column; gap: 2px; padding-inline: 4px; font-size: 0.66rem; } .admin-nav-item .v-icon { display: block; } .admin-nav-item--active { box-shadow: inset 0 3px 0 var(--color-steel-blue); } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .upcoming-row { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; } .upcoming-row .appointment-status { grid-column: 2; } .upcoming-price { grid-column: 3; grid-row: 1 / span 2; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+
+/* Refinamento dos blocos de gestão: leitura rápida, estados claros e toque confortável. */
+.service-row, .customer-row, .day-row, .exception-row {
+  margin: 8px 0;
+  padding: 16px;
+  border: 1px solid rgba(var(--color-slate-rgb), 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--color-ink-rgb), 0.2);
+}
+.service-row:last-child, .customer-row:last-child, .day-row:last-child, .exception-row:last-child { border-bottom: 1px solid rgba(var(--color-slate-rgb), 0.18); }
+.service-row:hover, .customer-row:hover, .day-row:hover, .exception-row:hover { border-color: rgba(var(--color-steel-blue-rgb), 0.55); background: rgba(var(--color-steel-blue-rgb), 0.1); }
+.service-row--inactive, .customer-row--inactive { opacity: 0.58; }
+.service-row strong, .customer-row strong { font-size: 0.96rem; letter-spacing: 0.01em; }
+.service-row span, .customer-row span { color: var(--color-slate); }
+.row-actions { flex-wrap: wrap; justify-content: flex-end; }
+.row-actions :deep(.v-btn) { min-height: 40px; border-radius: var(--radius-sm); color: var(--color-paper); text-transform: none; }
+.row-actions :deep(.v-chip) { border-color: rgba(var(--color-steel-blue-rgb), 0.58); color: var(--color-steel-blue); }
+.day-row { gap: 12px; }
+.day-label { color: var(--color-paper); font-size: 0.9rem; }
+.day-period { padding: 8px; border: 1px solid rgba(var(--color-slate-rgb), 0.16); border-radius: var(--radius-sm); background: rgba(var(--color-navy-deep-rgb), 0.5); }
+.settings-panel, .form-panel { box-shadow: 0 12px 30px rgba(var(--color-ink-rgb), 0.18); }
+.settings-panel .v-btn, .form-panel .v-btn { min-height: 44px; }
+.exception-row { align-items: flex-start; }
+.exception-row .v-btn { flex: 0 0 auto; min-height: 40px; color: var(--color-slate); text-transform: none; }
+@media (max-width: 600px) {
+  .service-row, .customer-row, .day-row, .exception-row { margin: 8px 0; padding: 14px; }
+  .row-actions { justify-content: flex-start; }
+  .day-period { flex-wrap: wrap; }
+  .day-period :deep(.v-checkbox) { flex: 1 0 100%; }
+  .exception-row { flex-direction: column; }
+  .exception-row .v-btn { align-self: flex-start; }
+}
 </style>
