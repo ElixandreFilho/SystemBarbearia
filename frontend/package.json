@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mdi/font": "^7.4.47",
     "@fontsource/instrument-serif": "^5.1.1",
     "@fontsource/manrope": "^5.1.1",
+    "@mdi/font": "^7.4.47",
+    "apexcharts": "^7.8.0",
     "pinia": "^2.3.0",
     "vue": "^3.5.0",
     "vue-router": "^4.4.0",
+    "vue3-apexcharts": "^1.11.1",
     "vuetify": "^3.7.0"
   },
   "devDependencies": {
