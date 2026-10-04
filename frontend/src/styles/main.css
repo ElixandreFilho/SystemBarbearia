@@ -59,6 +59,44 @@ body {
   cursor: not-allowed;
 }
 
+/* Overlays do Vuetify: selects, menus e listas precisam manter o contraste
+   do tema escuro mesmo quando são renderizados fora do componente original. */
+.v-overlay-container .v-overlay__content {
+  color: var(--color-paper);
+}
+
+.v-overlay-container .v-menu > .v-overlay__content,
+.v-overlay-container .v-list {
+  border: 1px solid rgba(var(--color-slate-rgb), 0.34);
+  border-radius: var(--radius-btn);
+  background: var(--color-navy-deep);
+  color: var(--color-paper);
+  box-shadow: 0 16px 36px rgba(var(--color-ink-rgb), 0.42);
+}
+
+.v-overlay-container .v-list-item {
+  min-height: 44px;
+  color: var(--color-paper);
+}
+
+.v-overlay-container .v-list-item:hover,
+.v-overlay-container .v-list-item--active,
+.v-overlay-container .v-list-item--highlighted {
+  background: rgba(var(--color-steel-blue-rgb), 0.18);
+  color: var(--color-paper);
+}
+
+.v-overlay-container .v-list-item__overlay {
+  background: transparent;
+}
+
+.v-overlay-container .v-list-item__prepend > .v-icon,
+.v-overlay-container .v-list-item__append > .v-icon,
+.v-overlay-container .v-list-item-title,
+.v-overlay-container .v-list-item-subtitle {
+  color: inherit;
+}
+
 .v-application .v-field:focus-within,
 .v-application .v-btn:focus-visible {
   box-shadow: var(--focus-ring);
