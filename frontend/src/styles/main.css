@@ -1,16 +1,3 @@
-:root {
-  --ink: #0A0D12;
-  --navy-deep: #0F1B2E;
-  --navy: #1F3B63;
-  --steel-blue: #5D8AC4;
-  --paper: #F4F6F9;
-  --slate: #8B96A8;
-  --hairline: rgba(139, 150, 168, 0.28);
-  --hairline-dark: rgba(244, 246, 249, 0.16);
-  --auth-surface: #15243B;
-  --auth-surface-hover: #1A2B45;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -25,14 +12,14 @@ body,
 }
 
 body {
-  background: var(--paper);
+  background: var(--color-paper);
   color: var(--ink);
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .v-application {
-  background: var(--paper) !important;
-  font-family: 'Manrope', sans-serif !important;
+  background: var(--color-paper) !important;
+  font-family: var(--font-ui) !important;
 }
 
 .v-application .v-btn,
@@ -40,7 +27,7 @@ body {
 .v-application .v-label,
 .v-application input,
 .v-application textarea {
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .v-application a {
@@ -53,14 +40,19 @@ body {
 .v-application .v-btn:focus-visible,
 .v-application .v-field:focus-within,
 .v-application a:focus-visible {
-  outline: 2px solid var(--steel-blue) !important;
+  outline: 2px solid var(--color-steel-blue) !important;
   outline-offset: 3px;
+}
+
+.v-application .v-field:focus-within,
+.v-application .v-btn:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .global-app-bar {
   background: var(--navy-deep) !important;
   border-bottom: 1px solid var(--hairline-dark) !important;
-  color: var(--paper) !important;
+  color: var(--color-paper) !important;
 }
 
 .global-app-bar .v-toolbar__content {
@@ -69,7 +61,7 @@ body {
 
 .global-app-bar .v-app-bar-title {
   color: var(--paper);
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 1.55rem;
   letter-spacing: 0;
 }
@@ -84,8 +76,8 @@ body:has(.auth-page) .global-app-bar {
   min-width: 0;
   place-items: center;
   padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: var(--ink);
-  background-image: radial-gradient(circle at 50% 42%, rgba(31, 59, 99, 0.16), transparent 42%);
+  background: var(--color-ink);
+  background-image: radial-gradient(circle at 50% 42%, rgba(var(--color-navy-rgb), 0.16), transparent 42%);
 }
 
 .auth-card {
@@ -93,10 +85,10 @@ body:has(.auth-page) .global-app-bar {
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(93, 138, 196, 0.16) !important;
+  border: 1px solid rgba(var(--color-steel-blue-rgb), 0.16) !important;
   border-radius: 18px !important;
-  background: var(--navy-deep) !important;
-  box-shadow: 0 0 42px rgba(93, 138, 196, 0.12) !important;
+  background: var(--color-navy-deep) !important;
+  box-shadow: 0 0 42px rgba(var(--color-steel-blue-rgb), 0.12) !important;
   animation: auth-card-enter 460ms ease-out both;
 }
 
@@ -117,10 +109,10 @@ body:has(.auth-page) .global-app-bar {
   height: 64px;
   margin: 0 auto 20px;
   place-items: center;
-  border: 1px solid rgba(93, 138, 196, 0.6);
+  border: 1px solid rgba(var(--color-steel-blue-rgb), 0.6);
   border-radius: 50%;
-  background: rgba(93, 138, 196, 0.1);
-  box-shadow: 0 0 24px rgba(93, 138, 196, 0.18);
+  background: rgba(var(--color-steel-blue-rgb), 0.1);
+  box-shadow: 0 0 24px rgba(var(--color-steel-blue-rgb), 0.18);
   color: var(--steel-blue);
 }
 
@@ -131,7 +123,7 @@ body:has(.auth-page) .global-app-bar {
 .auth-card .v-card-title {
   padding: 0;
   color: var(--paper);
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-ui);
   font-size: 1.35rem;
   font-weight: 600;
   line-height: 1.3;
@@ -169,7 +161,7 @@ body:has(.auth-page) .global-app-bar {
 .auth-card .auth-input .v-field--focused {
   border-color: var(--steel-blue);
   background: var(--auth-surface-hover);
-  box-shadow: 0 0 0 3px rgba(93, 138, 196, 0.16);
+  box-shadow: 0 0 0 3px rgba(var(--color-steel-blue-rgb), 0.16);
 }
 
 .auth-card .auth-input .v-field__input,
@@ -222,7 +214,7 @@ body:has(.auth-page) .global-app-bar {
 }
 
 .auth-card .v-btn:hover {
-  background: #6E9AD0 !important;
+  background: var(--color-steel-blue-hover) !important;
 }
 
 .auth-card .v-btn:active {
@@ -246,16 +238,16 @@ body:has(.auth-page) .global-app-bar {
 
 .auth-card .v-alert {
   margin-bottom: 20px;
-  border: 1px solid rgba(93, 138, 196, 0.34);
+  border: 1px solid rgba(var(--color-steel-blue-rgb), 0.34);
   border-radius: 8px;
-  background: rgba(93, 138, 196, 0.1) !important;
+  background: rgba(var(--color-steel-blue-rgb), 0.1) !important;
   color: var(--paper);
   animation: auth-error-enter 220ms ease-out both;
 }
 
 .dashboard-content {
   min-height: calc(100vh - 64px);
-  background: var(--paper);
+  background: var(--color-paper);
   padding: clamp(32px, 6vw, 80px) 24px;
 }
 
@@ -267,7 +259,7 @@ body:has(.auth-page) .global-app-bar {
 .dashboard-card .v-card-title {
   padding: 28px 28px 8px;
   color: var(--ink);
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 2.4rem;
   font-weight: 400;
 }

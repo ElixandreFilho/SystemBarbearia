@@ -12,6 +12,7 @@ import * as directives from 'vuetify/directives'
 
 import App from './App.vue'
 import router from './router'
+import './styles/design-tokens.css'
 import './styles/main.css'
 
 const vuetify = createVuetify({
@@ -22,16 +23,16 @@ const vuetify = createVuetify({
     themes: {
       barbearia: {
         colors: {
-          ink: '#0A0D12',
-          'navy-deep': '#0F1B2E',
-          navy: '#1F3B63',
-          'steel-blue': '#5D8AC4',
-          paper: '#F4F6F9',
-          slate: '#8B96A8',
-          primary: '#5D8AC4',
-          secondary: '#8B96A8',
-          background: '#F4F6F9',
-          surface: '#F4F6F9',
+          ink: 'rgb(var(--color-ink-rgb))',
+          'navy-deep': 'rgb(var(--color-navy-deep-rgb))',
+          navy: 'rgb(var(--color-navy-rgb))',
+          'steel-blue': 'rgb(var(--color-steel-blue-rgb))',
+          paper: 'rgb(var(--color-paper-rgb))',
+          slate: 'rgb(var(--color-slate-rgb))',
+          primary: 'rgb(var(--color-steel-blue-rgb))',
+          secondary: 'rgb(var(--color-slate-rgb))',
+          background: 'rgb(var(--color-paper-rgb))',
+          surface: 'rgb(var(--color-paper-rgb))',
         },
       },
     },

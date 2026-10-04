@@ -92,9 +92,9 @@ async function submit() {
   min-height: 100dvh;
   place-items: center;
   padding: 24px 16px;
-  background-color: #0a0d12 !important;
+  background-color: var(--color-ink) !important;
   background-image:
-    linear-gradient(135deg, rgba(10, 13, 18, 0.92), rgba(15, 27, 46, 0.9)),
+    linear-gradient(135deg, var(--surface-ink-overlay), var(--surface-navy-overlay)),
     url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1800&q=80');
   background-position: center;
   background-size: cover;
@@ -102,20 +102,20 @@ async function submit() {
 
 .login-card {
   width: min(100%, 400px);
-  border: 1px solid rgba(93, 138, 196, 0.2) !important;
+  border: 1px solid var(--surface-steel-blue-border-soft) !important;
   border-radius: 18px !important;
-  background: #ffffff !important;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28) !important;
+  background: var(--color-white) !important;
+  box-shadow: var(--shadow-auth) !important;
 }
 
 .login-brand {
   padding: 32px 24px 8px;
-  color: #0a0d12;
+  color: var(--color-ink);
   text-align: center;
 }
 
 .login-est {
-  color: #8b96a8;
+  color: var(--color-slate);
   font-family: 'Manrope', sans-serif;
   font-size: 0.68rem;
   font-weight: 600;
@@ -127,13 +127,13 @@ async function submit() {
   width: 48px;
   height: 48px;
   margin: 10px auto;
-  color: #1f3b63;
+  color: var(--color-navy);
   font-size: 28px;
 }
 
 .login-brand h1 {
   margin: 8px 0 0;
-  color: #0f1b2e;
+  color: var(--color-navy-deep);
   font-family: 'Manrope', sans-serif;
   font-size: clamp(2rem, 10vw, 2.8rem);
   font-weight: 700;
@@ -143,7 +143,7 @@ async function submit() {
 
 .login-brand p {
   margin: 12px 0 0;
-  color: #8b96a8;
+  color: var(--color-slate);
   font-family: 'Manrope', sans-serif;
   font-size: 0.9rem;
 }
@@ -159,19 +159,19 @@ async function submit() {
 .login-field :deep(.v-field) {
   min-height: 52px;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .login-field :deep(.v-field--focused) {
-  box-shadow: 0 0 0 3px rgba(93, 138, 196, 0.15);
+  box-shadow: 0 0 0 3px var(--surface-steel-blue-glow);
 }
 
 .login-submit {
   min-height: 48px;
   margin-top: 4px;
   border-radius: 8px !important;
-  background: #0f1b2e !important;
-  color: #ffffff !important;
+  background: var(--color-navy-deep) !important;
+  color: var(--color-white) !important;
   font-family: 'Manrope', sans-serif;
   font-weight: 600;
   text-transform: none;
@@ -179,7 +179,7 @@ async function submit() {
 }
 
 .login-submit:hover {
-  background: #1f3b63 !important;
+  background: var(--color-navy) !important;
 }
 
 .login-submit:active {
@@ -203,11 +203,11 @@ async function submit() {
 }
 
 .forgot-link {
-  color: #0a0d12;
+  color: var(--color-ink);
 }
 
 .register-link {
-  color: #5d8ac4;
+  color: var(--color-steel-blue);
 }
 
 .login-error {

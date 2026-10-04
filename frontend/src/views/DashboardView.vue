@@ -397,14 +397,14 @@ onMounted(loadDashboard)
 .section-kicker { margin: 0 0 8px; color: var(--steel-blue); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
 .section-heading h2 { font-size: 2rem; line-height: 1.05; }
 .dashboard-grid { align-items: flex-start; }
-.dashboard-section, .booking-panel { border: 1px solid var(--hairline); background: rgba(255, 255, 255, 0.28); padding: 24px; }
-.booking-panel { position: sticky; top: 88px; border-color: rgba(31, 59, 99, 0.35); background: var(--navy-deep); color: var(--paper); }
+.dashboard-section, .booking-panel { border: 1px solid var(--hairline); background: var(--surface-white-soft); padding: 24px; }
+.booking-panel { position: sticky; top: 88px; border-color: var(--surface-navy-border); background: var(--navy-deep); color: var(--paper); }
 .booking-panel .section-heading h2, .booking-panel .section-kicker { color: var(--paper); }
 .booking-panel .section-kicker { color: var(--steel-blue); }
 .loading-line { margin: 24px 0; }
 .selection-count { color: var(--slate); font-size: 0.82rem; }
 .service-card { display: flex; width: 100%; min-height: 148px; gap: 16px; padding: 20px; border: 1px solid var(--hairline); background: transparent; color: var(--ink); cursor: pointer; text-align: left; transition: border-color 180ms ease, background-color 180ms ease; }
-.service-card:hover, .service-card--selected { border-color: var(--steel-blue); background: rgba(93, 138, 196, 0.08); }
+.service-card:hover, .service-card--selected { border-color: var(--steel-blue); background: var(--surface-steel-blue-soft); }
 .service-card:focus-visible { outline: 2px solid var(--steel-blue); outline-offset: 3px; }
 .service-check { display: grid; width: 28px; height: 28px; flex: 0 0 28px; place-items: center; border: 1px solid var(--slate); color: var(--steel-blue); }
 .service-card--selected .service-check { border-color: var(--steel-blue); background: var(--steel-blue); color: var(--paper); }
@@ -431,10 +431,10 @@ onMounted(loadDashboard)
 .dashboard-input { margin-bottom: 18px; }
 .booking-panel :deep(.v-field) { color: var(--paper); }
 .booking-panel :deep(.v-label), .booking-panel :deep(input), .booking-panel :deep(textarea) { color: var(--paper); }
-.booking-panel :deep(.v-field__outline) { color: rgba(244, 246, 249, 0.4); }
+.booking-panel :deep(.v-field__outline) { color: var(--surface-paper-outline-strong); }
 .slot-heading { margin: 8px 0 12px; color: var(--paper); font-size: 0.86rem; font-weight: 600; }
 .slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
-.slot-button { border-color: rgba(244, 246, 249, 0.3) !important; border-radius: 4px !important; color: var(--paper) !important; text-transform: none; }
+.slot-button { border-color: var(--surface-paper-outline) !important; border-radius: 4px !important; color: var(--paper) !important; text-transform: none; }
 .slot-button--selected { border-color: var(--steel-blue) !important; background: var(--steel-blue) !important; }
 .book-button { min-height: 48px; border-radius: 4px !important; background: var(--steel-blue) !important; color: var(--paper) !important; text-transform: none; }
 .logout-button { color: var(--steel-blue); text-transform: none; }

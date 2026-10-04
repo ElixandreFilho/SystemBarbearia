@@ -1,0 +1,76 @@
+:root {
+  /* Paleta oficial: a única cor de ação/interação é o steel-blue. */
+  --color-ink: #0A0D12;
+  --color-navy-deep: #0F1B2E;
+  --color-navy: #1F3B63;
+  --color-steel-blue: #5D8AC4;
+  --color-paper: #F4F6F9;
+  --color-slate: #8B96A8;
+
+  --color-white: #FFFFFF;
+  --color-white-rgb: 255, 255, 255;
+
+  --color-ink-rgb: 10, 13, 18;
+  --color-navy-deep-rgb: 15, 27, 46;
+  --color-navy-rgb: 31, 59, 99;
+  --color-steel-blue-rgb: 93, 138, 196;
+  --color-paper-rgb: 244, 246, 249;
+  --color-slate-rgb: 139, 150, 168;
+
+  --color-steel-blue-hover: #6E9AD0;
+  --color-steel-blue-active: #4C78B2;
+
+  --surface-white-soft: rgba(var(--color-white-rgb), 0.28);
+  --surface-white-medium: rgba(var(--color-white-rgb), 0.42);
+  --surface-steel-blue-soft: rgba(var(--color-steel-blue-rgb), 0.08);
+  --surface-steel-blue-subtle: rgba(var(--color-steel-blue-rgb), 0.12);
+  --surface-steel-blue-border: rgba(var(--color-steel-blue-rgb), 0.48);
+  --surface-steel-blue-border-soft: rgba(var(--color-steel-blue-rgb), 0.2);
+  --surface-steel-blue-border-strong: rgba(var(--color-steel-blue-rgb), 0.65);
+  --surface-steel-blue-glow: rgba(var(--color-steel-blue-rgb), 0.15);
+  --surface-paper-outline: rgba(var(--color-paper-rgb), 0.3);
+  --surface-paper-outline-strong: rgba(var(--color-paper-rgb), 0.4);
+  --surface-slate-soft: rgba(var(--color-slate-rgb), 0.08);
+  --surface-slate-border: rgba(var(--color-slate-rgb), 0.5);
+  --surface-navy-border: rgba(var(--color-navy-rgb), 0.35);
+  --surface-navy-strong-border: rgba(var(--color-navy-rgb), 0.55);
+  --surface-ink-overlay: rgba(var(--color-ink-rgb), 0.92);
+  --surface-navy-overlay: rgba(var(--color-navy-deep-rgb), 0.9);
+  --shadow-auth: 0 18px 48px rgba(var(--color-ink-rgb), 0.28);
+  --shadow-drag: 0 8px 18px rgba(var(--color-navy-deep-rgb), 0.08);
+
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-ui: 'Manrope', Arial, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --space-7: 64px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-auth: 18px;
+
+  --hairline: rgba(var(--color-slate-rgb), 0.28);
+  --hairline-dark: rgba(var(--color-paper-rgb), 0.16);
+  --hairline-strong: rgba(var(--color-slate-rgb), 0.46);
+  --focus-ring: 0 0 0 3px rgba(var(--color-steel-blue-rgb), 0.32);
+  --auth-surface: #15243B;
+  --auth-surface-hover: #1A2B45;
+
+  --motion-fast: 180ms ease;
+  --motion-normal: 280ms ease;
+  --motion-entry: 460ms ease-out;
+
+  /* Aliases legados: preservam os componentes existentes durante a migração. */
+  --ink: var(--color-ink);
+  --navy-deep: var(--color-navy-deep);
+  --navy: var(--color-navy);
+  --steel-blue: var(--color-steel-blue);
+  --paper: var(--color-paper);
+  --slate: var(--color-slate);
+}
