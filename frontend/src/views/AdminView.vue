@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import type { ApexOptions } from 'apexcharts'
+import ApexChart from 'vue3-apexcharts'
 
 import { apiRequest } from '../services/api'
 import { useAuthStore } from '../stores/auth'
@@ -101,6 +103,8 @@ const appointments = ref<AdminAppointment[]>([])
 const specialDates = ref<SpecialDate[]>([])
 const blockedSlots = ref<BlockedSlot[]>([])
 const stats = ref<DashboardStats | null>(null)
+const chartAppointments = ref<AdminAppointment[]>([])
+const loadingCharts = ref(false)
 const days = ref<DayForm[]>([
   { weekday: 0, label: 'Segunda-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
   { weekday: 1, label: 'Terça-feira', morningEnabled: false, morningStart: '09:00', morningEnd: '12:00', afternoonEnabled: false, afternoonStart: '14:00', afternoonEnd: '18:00' },
@@ -152,6 +156,57 @@ const filteredCustomers = computed(() => {
   if (!query) return customers.value
   return customers.value.filter((customer) => [customer.full_name, customer.email, customer.phone].some((value) => value?.toLowerCase().includes(query)))
 })
+
+const serviceChartSeries = computed(() => (stats.value?.popular_services ?? []).map((service) => service.bookings))
+const serviceChartLabels = computed(() => (stats.value?.popular_services ?? []).map((service) => service.name))
+const statusChartSeries = computed(() => [
+  stats.value?.confirmed_appointments ?? 0,
+  stats.value?.completed_appointments ?? 0,
+  stats.value?.cancelled_appointments ?? 0,
+])
+const serviceChartOptions = computed<ApexOptions>(() => ({
+  chart: { type: 'donut', toolbar: { show: false }, fontFamily: 'Manrope, sans-serif' },
+  labels: serviceChartLabels.value,
+  colors: ['var(--color-steel-blue)', 'var(--color-navy)', 'var(--color-slate)', 'var(--color-navy-deep)', 'var(--color-paper)'],
+  dataLabels: { enabled: false },
+  legend: { position: 'bottom', fontFamily: 'Manrope, sans-serif', labels: { colors: 'var(--color-ink)' } },
+  stroke: { colors: ['var(--color-paper)'] },
+  plotOptions: { pie: { donut: { size: '66%', labels: { show: true, total: { show: true, label: 'Agendamentos', color: 'var(--color-slate)' } } } } },
+  tooltip: { theme: 'light' },
+}))
+const statusChartOptions = computed<ApexOptions>(() => ({
+  chart: { type: 'donut', toolbar: { show: false }, fontFamily: 'Manrope, sans-serif' },
+  labels: ['Confirmados', 'Concluídos', 'Cancelados'],
+  colors: ['var(--color-steel-blue)', 'var(--color-navy)', 'var(--color-slate)'],
+  dataLabels: { enabled: false },
+  legend: { position: 'bottom', fontFamily: 'Manrope, sans-serif', labels: { colors: 'var(--color-ink)' } },
+  stroke: { colors: ['var(--color-paper)'] },
+  plotOptions: { pie: { donut: { size: '66%', labels: { show: true, total: { show: true, label: 'Status', color: 'var(--color-slate)' } } } } },
+  tooltip: { theme: 'light' },
+}))
+const heatmapSeries = computed(() => {
+  const counts = new Map<string, number>()
+  chartAppointments.value.forEach((appointment) => {
+    if (appointment.status !== 'CANCELLED') counts.set(appointment.date, (counts.get(appointment.date) ?? 0) + 1)
+  })
+  const days = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date()
+    date.setHours(12, 0, 0, 0)
+    date.setDate(date.getDate() - (29 - index))
+    const key = formatDate(date)
+    return { x: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), y: counts.get(key) ?? 0 }
+  })
+  return [{ name: 'Atendimentos', data: days }]
+})
+const heatmapChartOptions = computed<ApexOptions>(() => ({
+  chart: { type: 'heatmap', toolbar: { show: false }, fontFamily: 'Manrope, sans-serif' },
+  dataLabels: { enabled: false },
+  colors: ['var(--color-steel-blue)'],
+  plotOptions: { heatmap: { radius: 2, shadeIntensity: 0.55, colorScale: { ranges: [{ from: 0, to: 0, color: 'rgba(var(--color-slate-rgb), 0.12)', name: 'Sem atendimentos' }] } } },
+  legend: { show: false },
+  xaxis: { labels: { style: { colors: 'var(--color-slate)', fontFamily: 'Manrope, sans-serif' } } },
+  tooltip: { y: { formatter: (value) => `${value} atendimento(s)` } },
+}))
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
@@ -311,6 +366,17 @@ async function loadStats() {
     stats.value = await apiRequest<DashboardStats>('/admin/appointments/dashboard', {}, token())
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Não foi possível carregar os indicadores.'
+  }
+}
+
+async function loadChartAppointments() {
+  loadingCharts.value = true
+  try {
+    chartAppointments.value = await apiRequest<AdminAppointment[]>('/admin/appointments', {}, token())
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Não foi possível carregar os dados dos gráficos.'
+  } finally {
+    loadingCharts.value = false
   }
 }
 
@@ -586,7 +652,7 @@ async function logout() {
 
 onMounted(async () => {
   await loadAdminData()
-  await Promise.all([loadAppointments(), loadStats()])
+  await Promise.all([loadAppointments(), loadStats(), loadChartAppointments()])
 })
 </script>
 
@@ -667,11 +733,8 @@ onMounted(async () => {
                 </div>
                 <v-icon icon="mdi-chart-donut" aria-hidden="true" />
               </div>
-              <div v-if="!stats?.popular_services?.length" class="empty-state empty-state--compact">Ainda não há dados suficientes.</div>
-              <div v-for="(service, index) in stats?.popular_services || []" :key="service.name" class="insight-bar-row">
-                <div class="insight-bar-label"><span>{{ service.name }}</span><strong>{{ service.bookings }}</strong></div>
-                <div class="insight-bar-track"><span :style="{ width: `${Math.max(8, ((service.bookings / (stats?.popular_services?.[0]?.bookings || 1)) * 100))}%` }" :class="`insight-bar-fill insight-bar-fill--${index % 3}`" /></div>
-              </div>
+              <div v-if="!serviceChartSeries.length" class="empty-state empty-state--compact">Ainda não há dados suficientes.</div>
+              <ApexChart v-else type="donut" height="230" :options="serviceChartOptions" :series="serviceChartSeries" />
             </article>
             <article class="insight-panel">
               <div class="insight-heading">
@@ -681,11 +744,17 @@ onMounted(async () => {
                 </div>
                 <v-icon icon="mdi-chart-arc" aria-hidden="true" />
               </div>
-              <div class="status-summary">
-                <div><span class="status-dot status-dot--confirmed" />Confirmados<strong>{{ stats?.confirmed_appointments ?? 0 }}</strong></div>
-                <div><span class="status-dot status-dot--completed" />Concluídos<strong>{{ stats?.completed_appointments ?? 0 }}</strong></div>
-                <div><span class="status-dot status-dot--cancelled" />Cancelados<strong>{{ stats?.cancelled_appointments ?? 0 }}</strong></div>
+              <ApexChart type="donut" height="230" :options="statusChartOptions" :series="statusChartSeries" />
+            </article>
+            <article class="insight-panel insight-panel--heatmap">
+              <div class="insight-heading">
+                <div>
+                  <p class="section-kicker">Ritmo da agenda</p>
+                  <h2>Atendimentos nos últimos 30 dias</h2>
+                </div>
+                <v-progress-circular v-if="loadingCharts" indeterminate size="18" width="2" color="steel-blue" />
               </div>
+              <ApexChart type="heatmap" height="190" :options="heatmapChartOptions" :series="heatmapSeries" />
             </article>
           </section>
         </v-col>
@@ -992,6 +1061,7 @@ onMounted(async () => {
 .metric-card strong { display: block; overflow: hidden; margin: 10px 0 8px; color: var(--ink); font-size: clamp(1.3rem, 2vw, 1.8rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .insight-panel { min-height: 220px; padding: 20px; border: 1px solid var(--hairline); background: var(--surface-white-soft); }
+.insight-panel--heatmap { grid-column: 1 / -1; min-height: 240px; }
 .insight-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .insight-heading h2 { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 1.55rem; font-weight: 400; line-height: 1.05; }
 .insight-heading > .v-icon { color: var(--steel-blue); }
@@ -1074,5 +1144,5 @@ onMounted(async () => {
 .confirmation-dialog .v-card-title { color: var(--ink); font-family: 'Instrument Serif', serif; font-size: 1.7rem; font-weight: 400; }
 .confirmation-dialog .v-card-text { color: var(--slate); }
 @media (max-width: 960px) { .form-panel { position: static; } .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .admin-content { padding: 28px 12px 56px; } .admin-intro { margin-bottom: 24px; } .admin-intro h1 { font-size: 2.25rem; } .admin-section, .form-panel, .insight-panel { padding: 18px; } .admin-navigation { grid-template-columns: repeat(2, 1fr); gap: 6px; overflow: hidden; } .admin-nav-item { min-height: 46px; padding-inline: 6px; font-size: 0.76rem; } .admin-nav-item .v-icon { display: none; } .service-row { align-items: flex-start; flex-direction: column; } .row-actions { width: 100%; justify-content: flex-end; } .day-label { min-width: 100%; } .day-period { flex-basis: 100%; } .day-period :deep(.v-input) { flex: 1; } .metrics-grid, .filter-bar, .dashboard-insights { grid-template-columns: 1fr; } .insight-panel--heatmap { grid-column: auto; } .appointment-row { align-items: flex-start; flex-direction: column; } .appointment-row-actions { width: 100%; justify-content: space-between; } .manual-slots { grid-template-columns: repeat(3, 1fr); } }
 </style>
