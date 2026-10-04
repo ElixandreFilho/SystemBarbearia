@@ -854,12 +854,6 @@ onMounted(async () => {
                     <v-list-item prepend-icon="mdi-close-circle-outline" title="Cancelar agendamento" @click="cancelAdminAppointment(appointment)" />
                   </v-list>
                 </v-menu>
-                <v-btn v-if="appointment.possible_no_show" class="no-show-button" variant="outlined" size="small" @click="markNoShow(appointment)">
-                  Marcar como não compareceu
-                </v-btn>
-                <v-btn v-if="['PENDING', 'CONFIRMED'].includes(appointment.status)" class="cancel-appointment-button" variant="outlined" size="small" @click="cancelAdminAppointment(appointment)">
-                  Cancelar
-                </v-btn>
               </div>
             </div>
           </section>
