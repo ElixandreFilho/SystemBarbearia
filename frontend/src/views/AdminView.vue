@@ -180,10 +180,24 @@ function editCustomer(customer: Customer) {
 }
 
 async function saveCustomer() {
-  if (!customerForm.value.full_name.trim() || (!customerForm.value.id && customerForm.value.password.length < 8)) return
+  errorMessage.value = ''
+  if (!customerForm.value.full_name.trim()) {
+    errorMessage.value = 'Informe o nome completo do cliente.'
+    return
+  }
+  if (!customerForm.value.id && customerForm.value.password.length < 8) {
+    errorMessage.value = 'A senha temporária precisa ter pelo menos 8 caracteres.'
+    return
+  }
+  if (customerForm.value.password && customerForm.value.password.length < 8) {
+    errorMessage.value = 'A nova senha precisa ter pelo menos 8 caracteres.'
+    return
+  }
   savingCustomer.value = true
   try {
-    const payload: Record<string, string> = { full_name: customerForm.value.full_name.trim(), email: customerForm.value.email.trim(), phone: customerForm.value.phone.trim() }
+    const payload: Record<string, string> = { full_name: customerForm.value.full_name.trim() }
+    if (customerForm.value.email.trim()) payload.email = customerForm.value.email.trim()
+    if (customerForm.value.phone.trim()) payload.phone = customerForm.value.phone.trim()
     if (customerForm.value.password) payload.password = customerForm.value.password
     const saved = await apiRequest<Customer>(customerForm.value.id ? `/admin/customers/${customerForm.value.id}` : '/admin/customers', {
       method: customerForm.value.id ? 'PATCH' : 'POST',
