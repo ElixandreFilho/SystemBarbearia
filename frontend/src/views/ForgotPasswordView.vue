@@ -29,7 +29,7 @@ async function submit() {
 </script>
 
 <template>
-  <main class="auth-page">
+  <main class="auth-page auth-secondary-page">
     <v-card class="auth-card" elevation="0">
       <v-card-item>
         <div class="auth-brand-icon"><v-icon icon="mdi-lock-reset" aria-hidden="true" /></div>

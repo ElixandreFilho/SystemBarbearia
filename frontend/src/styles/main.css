@@ -245,6 +245,29 @@ body:has(.auth-page) .global-app-bar {
   animation: auth-error-enter 220ms ease-out both;
 }
 
+.auth-secondary-page {
+  background:
+    radial-gradient(circle at 50% 15%, rgba(var(--color-navy-rgb), 0.2), transparent 38%),
+    var(--color-ink);
+}
+
+.auth-secondary-page .auth-card {
+  animation: auth-card-enter var(--motion-entry) both;
+}
+
+.auth-secondary-page .auth-card .v-btn {
+  min-height: 48px;
+  border-radius: var(--radius-md) !important;
+  background: var(--color-steel-blue) !important;
+  color: var(--color-paper) !important;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.auth-secondary-page .auth-card .v-btn:hover {
+  background: var(--color-steel-blue-hover) !important;
+}
+
 .dashboard-content {
   min-height: calc(100vh - 64px);
   background: var(--color-paper);

@@ -28,7 +28,7 @@ async function submit() {
 </script>
 
 <template>
-  <main class="auth-page login-page">
+  <main class="auth-page login-page auth-primary-page">
     <v-card class="login-card" elevation="8">
       <div class="login-brand">
         <div class="login-est"></div>

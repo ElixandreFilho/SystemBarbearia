@@ -36,14 +36,14 @@ async function submit() {
 </script>
 
 <template>
-  <main class="auth-page">
+  <main class="auth-page auth-secondary-page">
     <v-card class="auth-card">
         <v-card-item>
           <div class="auth-brand-icon" aria-hidden="true">
             <v-icon icon="mdi-content-cut" />
           </div>
           <v-card-title>Criar conta</v-card-title>
-          <v-card-subtitle>Informe e-mail ou telefone</v-card-subtitle>
+          <v-card-subtitle>Informe seus dados para começar</v-card-subtitle>
         </v-card-item>
         <v-card-text>
           <v-alert v-if="errorMessage" type="error" variant="tonal">{{ errorMessage }}</v-alert>
