@@ -7,6 +7,7 @@ import ApexChart from 'vue3-apexcharts'
 import { apiRequest } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import type { User } from '../types/auth'
+import { useAutoDismiss } from '../composables/useAutoDismiss'
 
 interface Service {
   id: string
@@ -144,6 +145,7 @@ const manualSlots = ref<string[]>([])
 const manualNotes = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+useAutoDismiss([errorMessage, successMessage])
 const swipeStartX = ref<number | null>(null)
 const swipeAppointmentId = ref<string | null>(null)
 const swipeOffset = ref(0)

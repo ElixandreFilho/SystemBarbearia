@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 
 import { ApiError } from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useAutoDismiss } from '../composables/useAutoDismiss'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -14,6 +15,7 @@ const password = ref('')
 const errorMessage = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+useAutoDismiss([errorMessage])
 
 async function submit() {
   loading.value = true

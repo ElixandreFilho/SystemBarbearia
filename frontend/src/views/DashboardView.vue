@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 
 import { apiRequest } from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useAutoDismiss } from '../composables/useAutoDismiss'
 
 interface Service {
   id: string
@@ -46,6 +47,7 @@ const loadingSlots = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+useAutoDismiss([errorMessage, successMessage])
 const editingAppointment = ref<Appointment | null>(null)
 const editServiceIds = ref<string[]>([])
 const editNotes = ref('')

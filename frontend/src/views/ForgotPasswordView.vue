@@ -3,12 +3,14 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiError, apiRequest } from '../services/api'
+import { useAutoDismiss } from '../composables/useAutoDismiss'
 
 const router = useRouter()
 const email = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const loading = ref(false)
+useAutoDismiss([errorMessage, successMessage])
 
 async function submit() {
   loading.value = true

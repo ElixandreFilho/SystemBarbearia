@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, apiRequest } from '../services/api'
+import { useAutoDismiss } from '../composables/useAutoDismiss'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +11,7 @@ const password = ref('')
 const confirmation = ref('')
 const errorMessage = ref('')
 const loading = ref(false)
+useAutoDismiss([errorMessage])
 const token = computed(() => String(route.query.token ?? ''))
 
 async function submit() {
