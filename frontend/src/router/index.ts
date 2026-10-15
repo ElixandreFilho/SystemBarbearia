@@ -11,7 +11,8 @@ import ResetPasswordView from '../views/ResetPasswordView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/dashboard' },
+    // A entrada da aplicação deve sempre começar pela tela de login.
+    { path: '/', redirect: '/login' },
     { path: '/login', component: LoginView, meta: { guestOnly: true } },
     { path: '/cadastro', component: RegisterView, meta: { guestOnly: true } },
     { path: '/recuperar-senha', component: ForgotPasswordView, meta: { guestOnly: true } },

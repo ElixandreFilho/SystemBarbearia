@@ -214,6 +214,25 @@ class AdminAppointmentCreate(AppointmentCreate):
     customer_id: UUID
 
 
+class AdminAppointmentReorder(BaseModel):
+    date: date
+    appointment_ids: list[UUID] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def require_unique_ids(self) -> "AdminAppointmentReorder":
+        if len(self.appointment_ids) != len(set(self.appointment_ids)):
+            raise ValueError("a lista de agendamentos não pode conter duplicados")
+        return self
+
+
+class AdminAppointmentUpdate(BaseModel):
+    customer_id: UUID | None = None
+    date: date
+    start_time: time
+    service_ids: list[UUID] = Field(min_length=1)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
 class AppointmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

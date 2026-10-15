@@ -1,12 +1,14 @@
 :root {
-  --font-heading: 'Instrument Serif', Georgia, serif;
-  --font-body: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-heading: "Instrument Serif", Georgia, serif;
+  --font-body: "Manrope", system-ui, -apple-system, sans-serif;
   --radius-card: 16px;
   --radius-btn: 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

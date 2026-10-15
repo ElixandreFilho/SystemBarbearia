@@ -1,30 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
 
-import { ApiError } from '../services/api'
-import { useAuthStore } from '../stores/auth'
-import { useAutoDismiss } from '../composables/useAutoDismiss'
+import { ApiError } from "../services/api";
+import { useAuthStore } from "../stores/auth";
+import { useAutoDismiss } from "../composables/useAutoDismiss";
 
-const router = useRouter()
-const auth = useAuthStore()
-const identifier = ref('')
-const password = ref('')
-const showPassword = ref(false)
-const errorMessage = ref('')
-const loading = ref(false)
-useAutoDismiss([errorMessage])
+const router = useRouter();
+const auth = useAuthStore();
+const identifier = ref("");
+const password = ref("");
+const showPassword = ref(false);
+const errorMessage = ref("");
+const loading = ref(false);
+useAutoDismiss([errorMessage]);
 
 async function submit() {
-  loading.value = true
-  errorMessage.value = ''
+  loading.value = true;
+  errorMessage.value = "";
   try {
-    await auth.login({ identifier: identifier.value, password: password.value })
-    await router.push(auth.user?.role === 'ADMIN' ? '/admin' : '/dashboard')
+    await auth.login({
+      identifier: identifier.value,
+      password: password.value,
+    });
+    await router.push(auth.user?.role === "ADMIN" ? "/admin" : "/dashboard");
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : 'Não foi possível entrar'
+    errorMessage.value =
+      error instanceof ApiError ? error.message : "Não foi possível entrar";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
@@ -34,14 +38,23 @@ async function submit() {
     <v-card class="login-card" elevation="8">
       <div class="login-brand">
         <div class="login-est"></div>
-        <v-icon icon="mdi-content-cut" class="login-scissors" aria-hidden="true" />
+        <v-icon
+          icon="mdi-content-cut"
+          class="login-scissors"
+          aria-hidden="true"
+        />
         <div class="login-est">BARBER SHOP</div>
         <h1>CORTES</h1>
         <p>Acesse sua conta</p>
       </div>
 
       <v-card-text class="login-form-wrap">
-        <v-alert v-if="errorMessage" type="error" variant="tonal" class="login-error">
+        <v-alert
+          v-if="errorMessage"
+          type="error"
+          variant="tonal"
+          class="login-error"
+        >
           {{ errorMessage }}
         </v-alert>
 
@@ -96,8 +109,12 @@ async function submit() {
   padding: 24px 16px;
   background-color: var(--color-ink) !important;
   background-image:
-    linear-gradient(135deg, var(--surface-ink-overlay), var(--surface-navy-overlay)),
-    url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1800&q=80');
+    linear-gradient(
+      135deg,
+      var(--surface-ink-overlay),
+      var(--surface-navy-overlay)
+    ),
+    url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1800&q=80");
   background-position: center;
   background-size: cover;
 }
@@ -118,7 +135,7 @@ async function submit() {
 
 .login-est {
   color: var(--color-slate);
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.18em;
@@ -136,7 +153,7 @@ async function submit() {
 .login-brand h1 {
   margin: 8px 0 0;
   color: var(--color-paper);
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-size: clamp(2rem, 10vw, 2.8rem);
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -146,7 +163,7 @@ async function submit() {
 .login-brand p {
   margin: 12px 0 0;
   color: var(--color-slate);
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-size: 0.9rem;
 }
 
@@ -185,10 +202,12 @@ async function submit() {
   border-radius: 8px !important;
   background: var(--color-steel-blue) !important;
   color: var(--color-paper) !important;
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-weight: 600;
   text-transform: none;
-  transition: transform 120ms ease, background-color 180ms ease;
+  transition:
+    transform 120ms ease,
+    background-color 180ms ease;
 }
 
 .login-submit:hover {
@@ -210,7 +229,7 @@ async function submit() {
 .login-links .v-btn {
   min-height: 44px;
   padding-inline: 4px;
-  font-family: 'Manrope', sans-serif;
+  font-family: "Manrope", sans-serif;
   font-size: 0.78rem;
   text-transform: none;
 }

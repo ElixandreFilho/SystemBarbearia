@@ -6,7 +6,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.availability import get_availability
@@ -14,7 +14,8 @@ from app.dependencies import DbSession, get_current_user, require_role
 from app.audit import record_audit
 from app.models import Appointment, AppointmentService, AppointmentStatus, BarbershopSettings, IdempotencyRecord, Service, User, UserRole
 from app.notifications import send_email
-from app.schemas import AdminAppointmentCreate, AdminAppointmentResponse, AdminDashboardResponse, AppointmentCreate, AppointmentResponse, AppointmentUpdate, CancelAppointmentRequest, PopularServiceResponse
+from app.schedule.availability import TimeInterval, max_concurrent_overlaps
+from app.schemas import AdminAppointmentCreate, AdminAppointmentReorder, AdminAppointmentResponse, AdminAppointmentUpdate, AdminDashboardResponse, AppointmentCreate, AppointmentResponse, AppointmentUpdate, CancelAppointmentRequest, PopularServiceResponse
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
 admin_router = APIRouter(prefix="/api/v1/admin/appointments", tags=["admin-appointments"])
@@ -353,6 +354,92 @@ async def create_admin_appointment(
     return appointment
 
 
+@admin_router.patch("/{appointment_id}", response_model=AppointmentResponse)
+async def update_admin_appointment(
+    appointment_id: UUID,
+    payload: AdminAppointmentUpdate,
+    request: Request,
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> Appointment:
+    appointment = await db.get(Appointment, appointment_id)
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agendamento não encontrado")
+    if appointment.status not in (AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="agendamento não pode ser editado")
+    customer_id = payload.customer_id or appointment.customer_id
+    customer = await db.scalar(select(User).where(User.id == customer_id, User.role == UserRole.CUSTOMER, User.is_active.is_(True)))
+    if customer is None:
+        raise HTTPException(status_code=404, detail="cliente nao encontrado")
+    await db.execute(select(func.pg_advisory_xact_lock(advisory_lock_key(payload.date))))
+    services = list(await db.scalars(select(Service).where(Service.id.in_(payload.service_ids), Service.is_active.is_(True))))
+    if len(services) != len(set(payload.service_ids)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="um ou mais serviços não estão disponíveis")
+    availability = await get_availability(customer, db, payload.date, payload.service_ids, exclude_appointment_id=appointment.id)
+    if payload.start_time not in availability.slots:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="horário não está mais disponível")
+    duration = sum(service.duration_minutes for service in services)
+    appointment.customer_id = customer.id
+    appointment.date = payload.date
+    appointment.start_time = payload.start_time
+    appointment.end_time = (datetime.combine(payload.date, payload.start_time) + timedelta(minutes=duration)).time()
+    appointment.total_duration_minutes = duration
+    appointment.total_price_cents = sum(service.price_cents for service in services)
+    appointment.notes = payload.notes
+    await db.execute(delete(AppointmentService).where(AppointmentService.appointment_id == appointment.id))
+    db.add_all(AppointmentService(appointment_id=appointment.id, service_id=service.id, price_cents_snapshot=service.price_cents, duration_minutes_snapshot=service.duration_minutes) for service in services)
+    record_audit(db, request, admin.id, "APPOINTMENT_UPDATED_BY_ADMIN", "Appointment", str(appointment.id))
+    await db.commit()
+    await db.refresh(appointment)
+    return appointment
+
+
+@admin_router.post("/reorder", response_model=list[AdminAppointmentResponse])
+async def reorder_admin_appointments(
+    payload: AdminAppointmentReorder,
+    request: Request,
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> list[dict]:
+    """Move active appointments between their existing start slots atomically."""
+    await db.execute(select(func.pg_advisory_xact_lock(advisory_lock_key(payload.date))))
+    active_statuses = (AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
+    selected = list(await db.scalars(
+        select(Appointment)
+        .where(Appointment.date == payload.date, Appointment.id.in_(payload.appointment_ids))
+        .with_for_update()
+    ))
+    selected_by_id = {item.id: item for item in selected}
+    if len(selected) != len(payload.appointment_ids) or any(item.status not in active_statuses for item in selected):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="apenas agendamentos pendentes ou confirmados podem ser reorganizados")
+
+    slots = sorted((item.start_time for item in selected))
+    for appointment, start_time in zip((selected_by_id[item_id] for item_id in payload.appointment_ids), slots):
+        appointment.start_time = start_time
+        appointment.end_time = (datetime.combine(payload.date, start_time) + timedelta(minutes=appointment.total_duration_minutes)).time()
+
+    all_active = list(await db.scalars(
+        select(Appointment).where(Appointment.date == payload.date, Appointment.status.in_(active_statuses)).order_by(Appointment.start_time, Appointment.id)
+    ))
+    settings = await db.get(BarbershopSettings, 1) or BarbershopSettings(id=1)
+    for appointment in all_active:
+        candidate = TimeInterval(appointment.start_time, appointment.end_time)
+        others = [TimeInterval(item.start_time, item.end_time) for item in all_active if item.id != appointment.id]
+        if max_concurrent_overlaps(candidate, others) >= settings.capacity:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="a nova ordem excede a capacidade de atendimentos simultâneos")
+        same_customer = [TimeInterval(item.start_time, item.end_time) for item in all_active if item.id != appointment.id and item.customer_id == appointment.customer_id]
+        if max_concurrent_overlaps(candidate, same_customer) > 0:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="a nova ordem cria conflito para o mesmo cliente")
+
+    record_audit(db, request, admin.id, "APPOINTMENTS_REORDERED", "Appointment", str(payload.date), {
+        "appointment_ids": [str(item_id) for item_id in payload.appointment_ids],
+    })
+    await db.commit()
+    for appointment in selected:
+        await db.refresh(appointment)
+    return [await admin_appointment_response(db, appointment) for appointment in sorted(selected, key=lambda item: item.start_time)]
+
+
 @admin_router.get("/dashboard", response_model=AdminDashboardResponse)
 async def admin_dashboard(
     admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
@@ -384,6 +471,23 @@ async def admin_dashboard(
         "total_revenue_cents": sum(item.total_price_cents for item in active),
         "popular_services": [PopularServiceResponse(name=name, bookings=bookings) for name, bookings in service_rows.all()],
     }
+
+
+@admin_router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_cancelled_appointment(
+    appointment_id: UUID,
+    request: Request,
+    admin: Annotated[User, Depends(require_role(UserRole.ADMIN))],
+    db: DbSession,
+) -> None:
+    appointment = await db.get(Appointment, appointment_id)
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agendamento nÃ£o encontrado")
+    if appointment.status != AppointmentStatus.CANCELLED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="apenas agendamentos cancelados podem ser excluÃ­dos")
+    record_audit(db, request, admin.id, "APPOINTMENT_DELETED", "Appointment", str(appointment.id))
+    await db.delete(appointment)
+    await db.commit()
 
 
 @admin_router.patch("/{appointment_id}/cancel", response_model=AppointmentResponse)

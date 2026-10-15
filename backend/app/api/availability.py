@@ -21,7 +21,9 @@ async def get_availability(
     db: DbSession,
     target_date: date = Query(alias="date"),
     service_ids: list[UUID] = Query(min_length=1),
-    exclude_appointment_id: UUID | None = Query(default=None, include_in_schema=False),
+    # A função também é chamada internamente pelo endpoint administrativo.
+    # Um default simples evita que o objeto Query do FastAPI chegue ao SQLAlchemy.
+    exclude_appointment_id: UUID | None = None,
 ) -> AvailabilityResponse:
     services = list(await db.scalars(select(Service).where(Service.id.in_(service_ids), Service.is_active.is_(True))))
     if len(services) != len(set(service_ids)):

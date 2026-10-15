@@ -1,17 +1,17 @@
 :root {
   /* Paleta oficial: a única cor de ação/interação é o steel-blue. */
-  --color-ink: #0A0D12;
-  --color-navy-deep: #0F1B2E;
-  --color-navy: #1F3B63;
-  --color-steel-blue: #5D8AC4;
-  --color-paper: #F4F6F9;
-  --color-slate: #8B96A8;
-  --color-confirmed: #2F9E6B;
-  --color-completed: #5D8AC4;
-  --color-cancelled: #C75146;
-  --color-no-show: #B8860B;
+  --color-ink: #0a0d12;
+  --color-navy-deep: #0f1b2e;
+  --color-navy: #1f3b63;
+  --color-steel-blue: #5d8ac4;
+  --color-paper: #f4f6f9;
+  --color-slate: #8b96a8;
+  --color-confirmed: #2f9e6b;
+  --color-completed: #5d8ac4;
+  --color-cancelled: #c75146;
+  --color-no-show: #b8860b;
 
-  --color-white: #FFFFFF;
+  --color-white: #ffffff;
   --color-white-rgb: 255, 255, 255;
 
   --color-ink-rgb: 10, 13, 18;
@@ -21,8 +21,8 @@
   --color-paper-rgb: 244, 246, 249;
   --color-slate-rgb: 139, 150, 168;
 
-  --color-steel-blue-hover: #6E9AD0;
-  --color-steel-blue-active: #4C78B2;
+  --color-steel-blue-hover: #6e9ad0;
+  --color-steel-blue-active: #4c78b2;
 
   --surface-white-soft: rgba(var(--color-white-rgb), 0.28);
   --surface-white-medium: rgba(var(--color-white-rgb), 0.42);
@@ -63,8 +63,8 @@
   --hairline-dark: rgba(var(--color-paper-rgb), 0.16);
   --hairline-strong: rgba(var(--color-slate-rgb), 0.46);
   --focus-ring: 0 0 0 3px rgba(var(--color-steel-blue-rgb), 0.32);
-  --auth-surface: #15243B;
-  --auth-surface-hover: #1A2B45;
+  --auth-surface: #15243b;
+  --auth-surface-hover: #1a2b45;
 
   --motion-fast: 180ms ease;
   --motion-normal: 280ms ease;

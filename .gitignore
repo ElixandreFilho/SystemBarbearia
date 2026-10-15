@@ -1,23 +1,31 @@
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .venv/
-backend/.env
 
 # Node
 node_modules/
 frontend/dist/
-frontend/.env
 frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
 
 # Local infrastructure
-.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 *.log
+
+# Secrets and local credentials
+*.pem
+*.key
+*credentials*
+*secret*
 
 # IDE / OS
 .vscode/
